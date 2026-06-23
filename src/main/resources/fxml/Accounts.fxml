@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.finance.controller.AccountsController"
@@ -11,31 +9,65 @@
 
     <Label text="Manage Accounts" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
 
-    <HBox spacing="10">
-        <VBox spacing="5" prefWidth="300">
-            <Label text="Account Name"/>
-            <TextField fx:id="nameField" promptText="Enter account name"/>
+    <TabPane VBox.vgrow="ALWAYS">
 
-            <Label text="Account Type"/>
-            <ComboBox fx:id="typeComboBox" prefWidth="100"/>
+        <!-- ===== TAB 1: Accounts ===== -->
+        <Tab text="Accounts" closable="false">
+            <HBox spacing="15" style="-fx-padding: 10;">
 
-            <Label text="Initial Balance"/>
-            <TextField fx:id="balanceField" promptText="0.00"/>
+                <VBox spacing="8" prefWidth="260">
+                    <Label text="Account Name"/>
+                    <TextField fx:id="nameField" promptText="Enter account name"/>
 
-            <HBox spacing="10">
-                <Button text="Add Account" onAction="#handleAddAccount" style="-fx-padding: 8;"/>
-                <Button text="Update" onAction="#handleUpdateAccount" style="-fx-padding: 8;"/>
-                <Button text="Delete" onAction="#handleDeleteAccount" style="-fx-padding: 8;"/>
+                    <Label text="Account Type"/>
+                    <ComboBox fx:id="typeComboBox" prefWidth="240"/>
+
+                    <Label text="Initial Balance"/>
+                    <TextField fx:id="balanceField" promptText="0.00"/>
+
+                    <HBox spacing="8">
+                        <Button text="Add"    onAction="#handleAddAccount"/>
+                        <Button text="Update" onAction="#handleUpdateAccount"/>
+                        <Button text="Delete" onAction="#handleDeleteAccount"/>
+                    </HBox>
+                </VBox>
+
+                <TableView fx:id="accountsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="idColumn"      text="ID"      prefWidth="50"/>
+                        <TableColumn fx:id="nameColumn"    text="Name"    prefWidth="160"/>
+                        <TableColumn fx:id="typeColumn"    text="Type"    prefWidth="110"/>
+                        <TableColumn fx:id="balanceColumn" text="Balance" prefWidth="130"/>
+                    </columns>
+                    <placeholder><Label text="No accounts yet"/></placeholder>
+                </TableView>
             </HBox>
-        </VBox>
+        </Tab>
 
-        <TableView fx:id="accountsTable" onMouseClicked="#handleSelectAccount" VBox.vgrow="ALWAYS" prefWidth="500">
-            <columns>
-                <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
-                <TableColumn fx:id="nameColumn" text="Name" prefWidth="150"/>
-                <TableColumn fx:id="typeColumn" text="Type" prefWidth="100"/>
-                <TableColumn fx:id="balanceColumn" text="Balance" prefWidth="150"/>
-            </columns>
-        </TableView>
-    </HBox>
+        <!-- ===== TAB 2: Account Types ===== -->
+        <Tab text="Account Types" closable="false">
+            <HBox spacing="15" style="-fx-padding: 10;">
+
+                <VBox spacing="8" prefWidth="260">
+                    <Label text="Type Name"/>
+                    <TextField fx:id="typeNameField" promptText="e.g. cash, bank, savings"/>
+
+                    <HBox spacing="8">
+                        <Button text="Add"    onAction="#handleAddType"/>
+                        <Button text="Update" onAction="#handleUpdateType"/>
+                        <Button text="Delete" onAction="#handleDeleteType"/>
+                    </HBox>
+                </VBox>
+
+                <TableView fx:id="typesTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="typeIdColumn"   text="ID"   prefWidth="60"/>
+                        <TableColumn fx:id="typeNameColumn" text="Name" prefWidth="240"/>
+                    </columns>
+                    <placeholder><Label text="No account types yet. Add some!"/></placeholder>
+                </TableView>
+            </HBox>
+        </Tab>
+
+    </TabPane>
 </VBox>

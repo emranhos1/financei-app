@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -20,58 +19,32 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
 
-    public Transaction recordIncomeTransaction(Long userId, LocalDate date, BigDecimal amount, 
+    public Transaction recordIncomeTransaction(Long userId, LocalDate date, BigDecimal amount,
                                                Long toAccountId, Long categoryId, String note) {
         Account toAccount = accountRepository.findById(toAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("To account not found"));
-        
-        if (!toAccount.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Account does not belong to user");
-        }
+        if (!toAccount.getUserId().equals(userId)) throw new IllegalArgumentException("Account does not belong to user");
 
-        // Double-entry: Credit account (increase balance)
         toAccount.setBalance(toAccount.getBalance().add(amount));
         accountRepository.save(toAccount);
 
-        // Record transaction
-        Transaction transaction = Transaction.builder()
-                .userId(userId)
-                .date(date)
-                .type(Transaction.TransactionType.income)
-                .amount(amount)
-                .toAccountId(toAccountId)
-                .categoryId(categoryId)
-                .note(note)
-                .build();
-
-        return transactionRepository.save(transaction);
+        return transactionRepository.save(Transaction.builder()
+                .userId(userId).date(date).type(Transaction.TransactionType.income)
+                .amount(amount).toAccountId(toAccountId).categoryId(categoryId).note(note).build());
     }
 
     public Transaction recordExpenseTransaction(Long userId, LocalDate date, BigDecimal amount,
                                                 Long fromAccountId, Long categoryId, String note) {
         Account fromAccount = accountRepository.findById(fromAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("From account not found"));
+        if (!fromAccount.getUserId().equals(userId)) throw new IllegalArgumentException("Account does not belong to user");
 
-        if (!fromAccount.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Account does not belong to user");
-        }
-
-        // Double-entry: Debit account (decrease balance)
         fromAccount.setBalance(fromAccount.getBalance().subtract(amount));
         accountRepository.save(fromAccount);
 
-        // Record transaction
-        Transaction transaction = Transaction.builder()
-                .userId(userId)
-                .date(date)
-                .type(Transaction.TransactionType.expense)
-                .amount(amount)
-                .fromAccountId(fromAccountId)
-                .categoryId(categoryId)
-                .note(note)
-                .build();
-
-        return transactionRepository.save(transaction);
+        return transactionRepository.save(Transaction.builder()
+                .userId(userId).date(date).type(Transaction.TransactionType.expense)
+                .amount(amount).fromAccountId(fromAccountId).categoryId(categoryId).note(note).build());
     }
 
     public Transaction recordTransferTransaction(Long userId, LocalDate date, BigDecimal amount,
@@ -81,32 +54,75 @@ public class TransactionService {
         Account toAccount = accountRepository.findById(toAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("To account not found"));
 
-        if (!fromAccount.getUserId().equals(userId) || !toAccount.getUserId().equals(userId)) {
+        if (!fromAccount.getUserId().equals(userId) || !toAccount.getUserId().equals(userId))
             throw new IllegalArgumentException("Accounts do not belong to user");
-        }
-
-        if (fromAccount.getId().equals(toAccount.getId())) {
+        if (fromAccount.getId().equals(toAccount.getId()))
             throw new IllegalArgumentException("Cannot transfer to the same account");
-        }
 
-        // Double-entry: Debit source, credit destination
         fromAccount.setBalance(fromAccount.getBalance().subtract(amount));
         toAccount.setBalance(toAccount.getBalance().add(amount));
         accountRepository.save(fromAccount);
         accountRepository.save(toAccount);
 
-        // Record transaction
-        Transaction transaction = Transaction.builder()
-                .userId(userId)
-                .date(date)
-                .type(Transaction.TransactionType.transfer)
-                .amount(amount)
-                .fromAccountId(fromAccountId)
-                .toAccountId(toAccountId)
-                .note(note)
-                .build();
+        return transactionRepository.save(Transaction.builder()
+                .userId(userId).date(date).type(Transaction.TransactionType.transfer)
+                .amount(amount).fromAccountId(fromAccountId).toAccountId(toAccountId).note(note).build());
+    }
 
-        return transactionRepository.save(transaction);
+    public Transaction updateTransaction(Long transactionId, Long userId, LocalDate date,
+                                         BigDecimal newAmount, Long categoryId, String note) {
+        Transaction tx = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
+        if (!tx.getUserId().equals(userId)) throw new IllegalArgumentException("Access denied");
+
+        BigDecimal diff = newAmount.subtract(tx.getAmount());
+
+        // Reverse old and apply new balance difference
+        if (tx.getType() == Transaction.TransactionType.income) {
+            Account acc = accountRepository.findById(tx.getToAccountId()).orElseThrow();
+            acc.setBalance(acc.getBalance().add(diff));
+            accountRepository.save(acc);
+        } else if (tx.getType() == Transaction.TransactionType.expense) {
+            Account acc = accountRepository.findById(tx.getFromAccountId()).orElseThrow();
+            acc.setBalance(acc.getBalance().subtract(diff));
+            accountRepository.save(acc);
+        }
+
+        tx.setDate(date);
+        tx.setAmount(newAmount);
+        tx.setCategoryId(categoryId);
+        tx.setNote(note);
+        return transactionRepository.save(tx);
+    }
+
+    public void deleteTransaction(Long transactionId, Long userId) {
+        Transaction tx = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
+        if (!tx.getUserId().equals(userId)) throw new IllegalArgumentException("Access denied");
+
+        // Reverse balance effect
+        if (tx.getType() == Transaction.TransactionType.income && tx.getToAccountId() != null) {
+            accountRepository.findById(tx.getToAccountId()).ifPresent(acc -> {
+                acc.setBalance(acc.getBalance().subtract(tx.getAmount()));
+                accountRepository.save(acc);
+            });
+        } else if (tx.getType() == Transaction.TransactionType.expense && tx.getFromAccountId() != null) {
+            accountRepository.findById(tx.getFromAccountId()).ifPresent(acc -> {
+                acc.setBalance(acc.getBalance().add(tx.getAmount()));
+                accountRepository.save(acc);
+            });
+        } else if (tx.getType() == Transaction.TransactionType.transfer) {
+            if (tx.getFromAccountId() != null) accountRepository.findById(tx.getFromAccountId()).ifPresent(acc -> {
+                acc.setBalance(acc.getBalance().add(tx.getAmount()));
+                accountRepository.save(acc);
+            });
+            if (tx.getToAccountId() != null) accountRepository.findById(tx.getToAccountId()).ifPresent(acc -> {
+                acc.setBalance(acc.getBalance().subtract(tx.getAmount()));
+                accountRepository.save(acc);
+            });
+        }
+
+        transactionRepository.deleteById(transactionId);
     }
 
     public Transaction getTransactionById(Long transactionId) {
@@ -115,7 +131,7 @@ public class TransactionService {
     }
 
     public List<Transaction> getTransactionsByUserId(Long userId) {
-        return transactionRepository.findByUserId(userId);
+        return transactionRepository.findByUserIdOrderByDateDesc(userId);
     }
 
     public List<Transaction> getTransactionsByDateRange(Long userId, LocalDate startDate, LocalDate endDate) {
@@ -143,12 +159,6 @@ public class TransactionService {
     }
 
     public BigDecimal getNetIncome(Long userId, LocalDate startDate, LocalDate endDate) {
-        BigDecimal income = getTotalIncome(userId, startDate, endDate);
-        BigDecimal expense = getTotalExpense(userId, startDate, endDate);
-        return income.subtract(expense);
-    }
-
-    public void deleteTransaction(Long transactionId) {
-        transactionRepository.deleteById(transactionId);
+        return getTotalIncome(userId, startDate, endDate).subtract(getTotalExpense(userId, startDate, endDate));
     }
 }

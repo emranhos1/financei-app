@@ -12,8 +12,11 @@ import java.util.List;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
     List<Account> findByUserId(Long userId);
-    List<Account> findByUserIdAndType(Long userId, Account.AccountType type);
-    
+    List<Account> findByUserIdAndType(Long userId, String type);
+
     @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a WHERE a.userId = :userId")
     BigDecimal sumBalanceByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a WHERE a.userId = :userId AND LOWER(a.type) = LOWER(:type)")
+    BigDecimal sumBalanceByUserIdAndType(@Param("userId") Long userId, @Param("type") String type);
 }

@@ -2,7 +2,9 @@ package com.finance.controller;
 
 import com.finance.context.SessionContext;
 import com.finance.entity.Account;
+import com.finance.entity.AccountType;
 import com.finance.service.AccountService;
+import com.finance.service.AccountTypeService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -13,155 +15,139 @@ import org.springframework.stereotype.Controller;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
 public class AccountsController {
     private final SessionContext sessionContext;
     private final AccountService accountService;
+    private final AccountTypeService accountTypeService;
 
-    @FXML
-    private TableView<Account> accountsTable;
+    @FXML private TableView<Account> accountsTable;
+    @FXML private TableColumn<Account, Long> idColumn;
+    @FXML private TableColumn<Account, String> nameColumn;
+    @FXML private TableColumn<Account, String> typeColumn;
+    @FXML private TableColumn<Account, BigDecimal> balanceColumn;
+    @FXML private TextField nameField;
+    @FXML private ComboBox<String> typeComboBox;
+    @FXML private TextField balanceField;
 
-    @FXML
-    private TableColumn<Account, Long> idColumn;
-
-    @FXML
-    private TableColumn<Account, String> nameColumn;
-
-    @FXML
-    private TableColumn<Account, Account.AccountType> typeColumn;
-
-    @FXML
-    private TableColumn<Account, BigDecimal> balanceColumn;
-
-    @FXML
-    private TextField nameField;
-
-    @FXML
-    private ComboBox<Account.AccountType> typeComboBox;
-
-    @FXML
-    private TextField balanceField;
+    @FXML private TableView<AccountType> typesTable;
+    @FXML private TableColumn<AccountType, Long> typeIdColumn;
+    @FXML private TableColumn<AccountType, String> typeNameColumn;
+    @FXML private TextField typeNameField;
 
     @FXML
     public void initialize() {
-        setupTable();
+        setupAccountsTable();
+        setupTypesTable();
+        loadAccountTypes();
         loadAccounts();
-        typeComboBox.setItems(FXCollections.observableArrayList(Account.AccountType.values()));
     }
 
-    private void setupTable() {
+    private void setupAccountsTable() {
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         typeColumn.setCellValueFactory(new PropertyValueFactory<>("type"));
         balanceColumn.setCellValueFactory(new PropertyValueFactory<>("balance"));
+        accountsTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
+            if (sel != null) {
+                nameField.setText(sel.getName());
+                typeComboBox.setValue(sel.getType());
+                balanceField.setText(sel.getBalance().toPlainString());
+            }
+        });
     }
 
     private void loadAccounts() {
+        accountsTable.setItems(FXCollections.observableArrayList(
+                accountService.getAccountsByUserId(sessionContext.getCurrentUserId())));
+    }
+
+    private void loadAccountTypes() {
         Long userId = sessionContext.getCurrentUserId();
-        List<Account> accounts = accountService.getAccountsByUserId(userId);
-        accountsTable.setItems(FXCollections.observableArrayList(accounts));
+        List<AccountType> types = accountTypeService.getAccountTypesByUserId(userId);
+        typeComboBox.setItems(FXCollections.observableArrayList(
+                types.stream().map(AccountType::getName).collect(Collectors.toList())));
+        typesTable.setItems(FXCollections.observableArrayList(types));
     }
 
-    @FXML
-    public void handleAddAccount() {
+    @FXML public void handleAddAccount() {
         String name = nameField.getText().trim();
-        Account.AccountType type = typeComboBox.getValue();
-        String balanceStr = balanceField.getText().trim();
-
-        if (name.isEmpty() || type == null || balanceStr.isEmpty()) {
-            showAlert("Validation Error", "All fields are required");
-            return;
-        }
-
+        String type = typeComboBox.getValue();
+        String balStr = balanceField.getText().trim();
+        if (name.isEmpty() || type == null || balStr.isEmpty()) { showAlert("Validation Error", "All fields are required"); return; }
         try {
-            BigDecimal balance = new BigDecimal(balanceStr);
-            Long userId = sessionContext.getCurrentUserId();
-            accountService.createAccount(userId, name, type, balance);
-            clearFields();
-            loadAccounts();
-            showAlert("Success", "Account created successfully");
-        } catch (NumberFormatException e) {
-            showAlert("Validation Error", "Balance must be a valid number");
-        } catch (Exception e) {
-            showAlert("Error", "Failed to create account: " + e.getMessage());
+            accountService.createAccount(sessionContext.getCurrentUserId(), name, type, new BigDecimal(balStr));
+            clearAccountFields(); loadAccounts();
+        } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
+
+    @FXML public void handleUpdateAccount() {
+        Account sel = accountsTable.getSelectionModel().getSelectedItem();
+        if (sel == null) { showAlert("Error", "Select an account to update"); return; }
+        String name = nameField.getText().trim(); String type = typeComboBox.getValue();
+        if (name.isEmpty() || type == null) { showAlert("Validation Error", "Name and type are required"); return; }
+        try { accountService.updateAccount(sel.getId(), name, type); clearAccountFields(); loadAccounts();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
+
+    @FXML public void handleDeleteAccount() {
+        Account sel = accountsTable.getSelectionModel().getSelectedItem();
+        if (sel == null) { showAlert("Error", "Select an account to delete"); return; }
+        if (confirm("Delete account '" + sel.getName() + "'?")) {
+            try { accountService.deleteAccount(sel.getId()); clearAccountFields(); loadAccounts();
+            } catch (Exception e) { showAlert("Error", "Failed to delete: " + e.getMessage()); }
         }
     }
 
-    @FXML
-    public void handleUpdateAccount() {
-        Account selected = accountsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Error", "Please select an account to update");
-            return;
-        }
+    private void clearAccountFields() {
+        nameField.clear(); balanceField.clear(); typeComboBox.setValue(null);
+        accountsTable.getSelectionModel().clearSelection();
+    }
 
-        String name = nameField.getText().trim();
-        Account.AccountType type = typeComboBox.getValue();
+    private void setupTypesTable() {
+        typeIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        typeNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        typesTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
+            if (sel != null) typeNameField.setText(sel.getName());
+        });
+    }
 
-        if (name.isEmpty() || type == null) {
-            showAlert("Validation Error", "Name and type are required");
-            return;
-        }
+    @FXML public void handleAddType() {
+        String name = typeNameField.getText().trim();
+        if (name.isEmpty()) { showAlert("Validation Error", "Type name cannot be empty"); return; }
+        try { accountTypeService.createAccountType(sessionContext.getCurrentUserId(), name); clearTypeForm(); loadAccountTypes();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
 
-        try {
-            accountService.updateAccount(selected.getId(), name, type);
-            clearFields();
-            loadAccounts();
-            showAlert("Success", "Account updated successfully");
-        } catch (Exception e) {
-            showAlert("Error", "Failed to update account: " + e.getMessage());
+    @FXML public void handleUpdateType() {
+        AccountType sel = typesTable.getSelectionModel().getSelectedItem();
+        if (sel == null) { showAlert("Error", "Select a type to update"); return; }
+        String name = typeNameField.getText().trim();
+        if (name.isEmpty()) { showAlert("Validation Error", "Name cannot be empty"); return; }
+        try { accountTypeService.updateAccountType(sel.getId(), sessionContext.getCurrentUserId(), name); clearTypeForm(); loadAccountTypes();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
+
+    @FXML public void handleDeleteType() {
+        AccountType sel = typesTable.getSelectionModel().getSelectedItem();
+        if (sel == null) { showAlert("Error", "Select a type to delete"); return; }
+        if (confirm("Delete account type '" + sel.getName() + "'?")) {
+            try { accountTypeService.deleteAccountType(sel.getId(), sessionContext.getCurrentUserId()); clearTypeForm(); loadAccountTypes();
+            } catch (Exception e) { showAlert("Error", "Failed to delete: " + e.getMessage()); }
         }
     }
 
-    @FXML
-    public void handleDeleteAccount() {
-        Account selected = accountsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Error", "Please select an account to delete");
-            return;
-        }
+    private void clearTypeForm() { typeNameField.clear(); typesTable.getSelectionModel().clearSelection(); }
 
-        Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmDialog.setTitle("Confirm Delete");
-        confirmDialog.setHeaderText(null);
-        confirmDialog.setContentText("Are you sure you want to delete this account?");
-
-        Optional<ButtonType> result = confirmDialog.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                accountService.deleteAccount(selected.getId());
-                clearFields();
-                loadAccounts();
-                showAlert("Success", "Account deleted successfully");
-            } catch (Exception e) {
-                showAlert("Error", "Failed to delete account: " + e.getMessage());
-            }
-        }
+    private boolean confirm(String msg) {
+        Alert a = new Alert(Alert.AlertType.CONFIRMATION); a.setTitle("Confirm"); a.setHeaderText(null); a.setContentText(msg);
+        Optional<ButtonType> r = a.showAndWait(); return r.isPresent() && r.get() == ButtonType.OK;
     }
-
-    @FXML
-    public void handleSelectAccount() {
-        Account selected = accountsTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            nameField.setText(selected.getName());
-            typeComboBox.setValue(selected.getType());
-            balanceField.setText(selected.getBalance().toString());
-        }
-    }
-
-    private void clearFields() {
-        nameField.clear();
-        balanceField.clear();
-        typeComboBox.setValue(null);
-    }
-
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showAlert(String title, String msg) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION); a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
     }
 }

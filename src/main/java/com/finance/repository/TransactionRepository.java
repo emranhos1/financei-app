@@ -12,17 +12,17 @@ import java.util.List;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    List<Transaction> findByUserId(Long userId);
+    List<Transaction> findByUserIdOrderByDateDesc(Long userId);
     List<Transaction> findByUserIdAndDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
     List<Transaction> findByUserIdAndType(Long userId, Transaction.TransactionType type);
     List<Transaction> findByUserIdAndCategoryId(Long userId, Long categoryId);
-    
+
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.userId = :userId AND t.type = 'income' AND t.date BETWEEN :startDate AND :endDate")
     BigDecimal sumIncomeByUserAndDateRange(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
-    
+
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.userId = :userId AND t.type = 'expense' AND t.date BETWEEN :startDate AND :endDate")
     BigDecimal sumExpenseByUserAndDateRange(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
-    
+
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.userId = :userId AND t.categoryId = :categoryId AND t.type = 'expense' AND t.date BETWEEN :startDate AND :endDate")
     BigDecimal sumExpenseByCategory(@Param("userId") Long userId, @Param("categoryId") Long categoryId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

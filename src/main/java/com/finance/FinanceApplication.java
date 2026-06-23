@@ -19,28 +19,24 @@ public class FinanceApplication extends Application {
     private static ApplicationContext applicationContext;
     private static final CountDownLatch springInitialized = new CountDownLatch(1);
 
+    @Getter
+    private static Stage primaryStage;
+
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage stage) throws Exception {
+        primaryStage = stage;
         try {
-            // Wait for Spring Boot to initialize (max 30 seconds)
             if (!springInitialized.await(30, TimeUnit.SECONDS)) {
                 System.err.println("ERROR: Spring Boot initialization timeout");
                 System.exit(1);
             }
 
-            // Check if Spring context is available
             if (applicationContext == null) {
                 System.err.println("ERROR: Spring application context is null");
                 System.exit(1);
             }
 
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Login.fxml"));
-            loader.setControllerFactory(applicationContext::getBean);
-
-            Parent root = loader.load();
-            primaryStage.setTitle("Daily Finance Management System");
-            primaryStage.setScene(new Scene(root, 1024, 768));
-            primaryStage.show();
+            showLoginScreen();
         } catch (Exception e) {
             System.err.println("ERROR: Failed to start application");
             e.printStackTrace();
@@ -48,11 +44,31 @@ public class FinanceApplication extends Application {
         }
     }
 
+    public static void showLoginScreen() throws Exception {
+        FXMLLoader loader = new FXMLLoader(FinanceApplication.class.getResource("/fxml/Login.fxml"));
+        loader.setControllerFactory(applicationContext::getBean);
+        Parent root = loader.load();
+        primaryStage.setTitle("Daily Finance Management System");
+        primaryStage.setScene(new Scene(root, 500, 400));
+        primaryStage.setResizable(false);
+        primaryStage.centerOnScreen();
+        primaryStage.show();
+    }
+
+    public static void showDashboard() throws Exception {
+        FXMLLoader loader = new FXMLLoader(FinanceApplication.class.getResource("/fxml/Dashboard.fxml"));
+        loader.setControllerFactory(applicationContext::getBean);
+        Parent root = loader.load();
+        primaryStage.setScene(new Scene(root, 1024, 768));
+        primaryStage.setResizable(true);
+        primaryStage.centerOnScreen();
+    }
+
     public static void main(String[] args) {
         Thread springThread = new Thread(() -> {
             try {
                 applicationContext = SpringApplication.run(FinanceApplication.class, args);
-                springInitialized.countDown(); // Signal that Spring is ready
+                springInitialized.countDown();
             } catch (Exception e) {
                 System.err.println("ERROR: Spring Boot failed to initialize");
                 e.printStackTrace();
@@ -62,7 +78,6 @@ public class FinanceApplication extends Application {
         springThread.setDaemon(true);
         springThread.start();
 
-        // Launch JavaFX application
         launch(args);
     }
 }

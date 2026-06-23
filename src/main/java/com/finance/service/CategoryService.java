@@ -15,12 +15,10 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     public Category createCategory(Long userId, String name, Category.CategoryType type) {
-        Category category = Category.builder()
-                .userId(userId)
-                .name(name)
-                .type(type)
-                .build();
-        return categoryRepository.save(category);
+        boolean exists = categoryRepository.existsByUserIdAndNameAndType(userId, name.trim(), type);
+        if (exists) throw new IllegalArgumentException("Category '" + name + "' (" + type.name() + ") already exists");
+        return categoryRepository.save(Category.builder()
+                .userId(userId).name(name.trim()).type(type).build());
     }
 
     public Category getCategoryById(Long categoryId) {
@@ -33,16 +31,29 @@ public class CategoryService {
     }
 
     public List<Category> getIncomeCategories(Long userId) {
-        return categoryRepository.findByUserIdAndType(userId, Category.CategoryType.income);
+        // income + both
+        return categoryRepository.findByUserIdAndTypeIn(userId,
+                List.of(Category.CategoryType.income, Category.CategoryType.both));
     }
 
     public List<Category> getExpenseCategories(Long userId) {
-        return categoryRepository.findByUserIdAndType(userId, Category.CategoryType.expense);
+        // expense + both
+        return categoryRepository.findByUserIdAndTypeIn(userId,
+                List.of(Category.CategoryType.expense, Category.CategoryType.both));
     }
 
-    public Category updateCategory(Long categoryId, String name) {
+    public Category updateCategory(Long categoryId, Long userId, String name, Category.CategoryType type) {
         Category category = getCategoryById(categoryId);
-        category.setName(name);
+        if (!category.getUserId().equals(userId)) throw new SecurityException("Access denied");
+
+        boolean nameChanged = !category.getName().equals(name.trim());
+        boolean typeChanged = category.getType() != type;
+        if (nameChanged || typeChanged) {
+            boolean exists = categoryRepository.existsByUserIdAndNameAndType(userId, name.trim(), type);
+            if (exists) throw new IllegalArgumentException("Category '" + name + "' (" + type.name() + ") already exists");
+        }
+        category.setName(name.trim());
+        category.setType(type);
         return categoryRepository.save(category);
     }
 

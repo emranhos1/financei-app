@@ -15,7 +15,7 @@ import java.util.List;
 public class AccountService {
     private final AccountRepository accountRepository;
 
-    public Account createAccount(Long userId, String name, Account.AccountType type, BigDecimal initialBalance) {
+    public Account createAccount(Long userId, String name, String type, BigDecimal initialBalance) {
         Account account = Account.builder()
                 .userId(userId)
                 .name(name)
@@ -34,11 +34,11 @@ public class AccountService {
         return accountRepository.findByUserId(userId);
     }
 
-    public List<Account> getAccountsByUserAndType(Long userId, Account.AccountType type) {
+    public List<Account> getAccountsByUserAndType(Long userId, String type) {
         return accountRepository.findByUserIdAndType(userId, type);
     }
 
-    public Account updateAccount(Long accountId, String name, Account.AccountType type) {
+    public Account updateAccount(Long accountId, String name, String type) {
         Account account = getAccountById(accountId);
         account.setName(name);
         account.setType(type);
@@ -47,6 +47,10 @@ public class AccountService {
 
     public BigDecimal getNetWorth(Long userId) {
         return accountRepository.sumBalanceByUserId(userId);
+    }
+
+    public BigDecimal getBalanceByType(Long userId, String type) {
+        return accountRepository.sumBalanceByUserIdAndType(userId, type);
     }
 
     public void updateAccountBalance(Long accountId, BigDecimal newBalance) {

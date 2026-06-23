@@ -38,6 +38,6 @@ public class Category {
     }
 
     public enum CategoryType {
-        income, expense
+        income, expense, both
     }
 }

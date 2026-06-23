@@ -1,5 +1,6 @@
 package com.finance.controller;
 
+import com.finance.FinanceApplication;
 import com.finance.context.SessionContext;
 import com.finance.entity.User;
 import com.finance.service.UserService;
@@ -42,7 +43,11 @@ public class LoginController {
         Optional<User> user = userService.authenticateUser(username, password);
         if (user.isPresent()) {
             sessionContext.login(user.get());
-            navigateToDashboard();
+            try {
+                FinanceApplication.showDashboard();
+            } catch (Exception e) {
+                showAlert("Error", "Failed to load dashboard");
+            }
         } else {
             showAlert("Authentication Failed", "Invalid username or password, or account is inactive");
             passwordField.clear();
@@ -53,7 +58,7 @@ public class LoginController {
     public void handleRegister() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Register.fxml"));
-            loader.setControllerFactory(com.finance.FinanceApplication.getApplicationContext()::getBean);
+            loader.setControllerFactory(FinanceApplication.getApplicationContext()::getBean);
             Parent root = loader.load();
 
             Stage registerStage = new Stage();
@@ -62,25 +67,6 @@ public class LoginController {
             registerStage.show();
         } catch (IOException e) {
             showAlert("Error", "Failed to open registration window");
-        }
-    }
-
-    private void navigateToDashboard() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Dashboard.fxml"));
-            loader.setControllerFactory(com.finance.FinanceApplication.getApplicationContext()::getBean);
-            Parent root = loader.load();
-
-            Stage mainStage = new Stage();
-            mainStage.setTitle("Daily Finance Management System");
-            mainStage.setScene(new Scene(root, 1024, 768));
-            mainStage.show();
-
-            // Close login window
-            Stage loginStage = (Stage) usernameField.getScene().getWindow();
-            loginStage.close();
-        } catch (IOException e) {
-            showAlert("Error", "Failed to load dashboard");
         }
     }
 
