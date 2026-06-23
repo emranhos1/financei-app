@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.finance.controller.TransactionController"
+      spacing="10" style="-fx-padding: 15;">
+
+    <Label text="Record Transaction" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+
+    <HBox spacing="10">
+        <VBox spacing="5" prefWidth="300">
+            <Label text="Type"/>
+            <ComboBox fx:id="typeComboBox" prefWidth="150"/>
+
+            <Label text="Date"/>
+            <DatePicker fx:id="datePicker"/>
+
+            <Label text="Amount"/>
+            <TextField fx:id="amountField" promptText="0.00"/>
+
+            <Label text="Account"/>
+            <ComboBox fx:id="accountComboBox" prefWidth="150"/>
+
+            <Label text="Category"/>
+            <ComboBox fx:id="categoryComboBox" prefWidth="150"/>
+
+            <Label text="Note"/>
+            <TextArea fx:id="noteArea" prefHeight="60" prefWidth="280" wrapText="true"/>
+
+            <Button text="Record Transaction" onAction="#handleAddTransaction" style="-fx-padding: 10; -fx-pref-width: 150;"/>
+        </VBox>
+
+        <TableView fx:id="transactionsTable" VBox.vgrow="ALWAYS" prefWidth="500">
+            <columns>
+                <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+                <TableColumn fx:id="dateColumn" text="Date" prefWidth="100"/>
+                <TableColumn fx:id="typeColumn" text="Type" prefWidth="80"/>
+                <TableColumn fx:id="amountColumn" text="Amount" prefWidth="100"/>
+                <TableColumn fx:id="categoryColumn" text="Category" prefWidth="100"/>
+                <TableColumn fx:id="noteColumn" text="Note" prefWidth="200"/>
+            </columns>
+        </TableView>
+    </HBox>
+</VBox>

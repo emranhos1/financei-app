@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.finance.controller.AccountsController"
+      spacing="10" style="-fx-padding: 15;">
+
+    <Label text="Manage Accounts" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+
+    <HBox spacing="10">
+        <VBox spacing="5" prefWidth="300">
+            <Label text="Account Name"/>
+            <TextField fx:id="nameField" promptText="Enter account name"/>
+
+            <Label text="Account Type"/>
+            <ComboBox fx:id="typeComboBox" prefWidth="100"/>
+
+            <Label text="Initial Balance"/>
+            <TextField fx:id="balanceField" promptText="0.00"/>
+
+            <HBox spacing="10">
+                <Button text="Add Account" onAction="#handleAddAccount" style="-fx-padding: 8;"/>
+                <Button text="Update" onAction="#handleUpdateAccount" style="-fx-padding: 8;"/>
+                <Button text="Delete" onAction="#handleDeleteAccount" style="-fx-padding: 8;"/>
+            </HBox>
+        </VBox>
+
+        <TableView fx:id="accountsTable" onMouseClicked="#handleSelectAccount" VBox.vgrow="ALWAYS" prefWidth="500">
+            <columns>
+                <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+                <TableColumn fx:id="nameColumn" text="Name" prefWidth="150"/>
+                <TableColumn fx:id="typeColumn" text="Type" prefWidth="100"/>
+                <TableColumn fx:id="balanceColumn" text="Balance" prefWidth="150"/>
+            </columns>
+        </TableView>
+    </HBox>
+</VBox>

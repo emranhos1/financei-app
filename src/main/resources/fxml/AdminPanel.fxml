@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.finance.controller.AdminPanelController"
+      spacing="10" style="-fx-padding: 15;">
+
+    <Label text="Admin Panel - User Management" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+
+    <HBox spacing="10">
+        <Button text="Activate User" onAction="#handleActivateUser" style="-fx-padding: 8;"/>
+        <Button text="Deactivate User" onAction="#handleDeactivateUser" style="-fx-padding: 8;"/>
+    </HBox>
+
+    <TableView fx:id="usersTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+            <TableColumn fx:id="usernameColumn" text="Username" prefWidth="200"/>
+            <TableColumn fx:id="roleColumn" text="Role" prefWidth="100"/>
+            <TableColumn fx:id="statusColumn" text="Status" prefWidth="100"/>
+        </columns>
+    </TableView>
+</VBox>

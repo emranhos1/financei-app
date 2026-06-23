@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.finance.controller.DashboardHomeController"
+      fx:id="summaryVBox" spacing="20" style="-fx-padding: 20;">
+
+    <Label text="Financial Summary" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+
+    <!-- Net Worth -->
+    <VBox style="-fx-border-color: #cccccc; -fx-border-radius: 5; -fx-padding: 15;">
+        <Label text="Net Worth" style="-fx-font-size: 14;"/>
+        <Label fx:id="netWorthLabel" text="৳ 0.00" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+    </VBox>
+
+    <!-- Today -->
+    <VBox>
+        <Label text="Today" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+        <GridPane hgap="20" vgap="10">
+            <Label text="Income:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="todayIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="todayExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label text="Net:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="todayNetLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+        </GridPane>
+    </VBox>
+
+    <!-- This Month -->
+    <VBox>
+        <Label text="This Month" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+        <GridPane hgap="20" vgap="10">
+            <Label text="Income:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="monthIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="monthExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label text="Net:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="monthNetLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+        </GridPane>
+    </VBox>
+
+    <!-- This Year -->
+    <VBox>
+        <Label text="This Year" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+        <GridPane hgap="20" vgap="10">
+            <Label text="Income:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="yearIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="yearExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label text="Net:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="yearNetLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+        </GridPane>
+    </VBox>
+</VBox>

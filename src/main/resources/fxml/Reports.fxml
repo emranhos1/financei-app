@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.GridPane?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.finance.controller.ReportsController"
+      spacing="10" style="-fx-padding: 15;">
+
+    <Label text="Financial Reports" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+
+    <HBox spacing="10">
+        <Label text="Period:"/>
+        <ComboBox fx:id="periodComboBox" prefWidth="120"/>
+        <Label text="Start:"/>
+        <DatePicker fx:id="startDatePicker"/>
+        <Label text="End:"/>
+        <DatePicker fx:id="endDatePicker"/>
+        <Button text="Generate" onAction="#handleGenerateReport" style="-fx-padding: 8;"/>
+    </HBox>
+
+    <VBox style="-fx-border-color: #cccccc; -fx-padding: 10;">
+        <GridPane hgap="30" vgap="10">
+            <Label text="Total Income:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="totalIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+            <Label text="Total Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="totalExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+            <Label text="Net Income:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="netIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+        </GridPane>
+    </VBox>
+
+    <Label text="Expense by Category" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+    <TableView fx:id="categoryTable" prefHeight="150">
+        <columns>
+            <TableColumn fx:id="categoryNameColumn" text="Category" prefWidth="200"/>
+            <TableColumn fx:id="categoryAmountColumn" text="Amount" prefWidth="150"/>
+        </columns>
+    </TableView>
+
+    <Label text="Account Balances" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+    <TableView fx:id="accountTable" prefHeight="150">
+        <columns>
+            <TableColumn fx:id="accountNameColumn" text="Account" prefWidth="150"/>
+            <TableColumn fx:id="accountTypeColumn" text="Type" prefWidth="100"/>
+            <TableColumn fx:id="accountBalanceColumn" text="Balance" prefWidth="150"/>
+        </columns>
+    </TableView>
+</VBox>

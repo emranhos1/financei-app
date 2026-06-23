@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.finance.controller.LoginController"
+      alignment="CENTER" spacing="15" style="-fx-padding: 40;">
+
+    <Label text="Daily Finance Management System" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+    <Label text="Login" style="-fx-font-size: 18;"/>
+
+    <Label text="Username"/>
+    <TextField fx:id="usernameField" promptText="Enter your username"/>
+
+    <Label text="Password"/>
+    <PasswordField fx:id="passwordField" promptText="Enter your password"/>
+
+    <HBox spacing="10" alignment="CENTER">
+        <Button text="Login" style="-fx-padding: 10; -fx-font-size: 14;" onAction="#handleLogin"/>
+        <Button text="Register" style="-fx-padding: 10; -fx-font-size: 14;" onAction="#handleRegister"/>
+    </HBox>
+</VBox>
