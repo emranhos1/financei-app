@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.finance.controller.TransferController"
@@ -11,35 +9,47 @@
 
     <Label text="Transfer Between Accounts" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
 
-    <HBox spacing="10">
-        <VBox spacing="5" prefWidth="300">
-            <Label text="From Account"/>
-            <ComboBox fx:id="fromAccountComboBox" prefWidth="150"/>
+    <HBox spacing="15">
 
-            <Label text="To Account"/>
-            <ComboBox fx:id="toAccountComboBox" prefWidth="150"/>
+        <VBox spacing="8" prefWidth="300">
 
             <Label text="Date"/>
-            <DatePicker fx:id="datePicker"/>
+            <DatePicker fx:id="datePicker" maxWidth="Infinity"/>
+
+            <Label text="From Account"/>
+            <ComboBox fx:id="fromAccountComboBox" maxWidth="Infinity"/>
+
+            <Label text="To Account"/>
+            <ComboBox fx:id="toAccountComboBox" maxWidth="Infinity"/>
 
             <Label text="Amount"/>
             <TextField fx:id="amountField" promptText="0.00"/>
 
             <Label text="Note"/>
-            <TextArea fx:id="noteArea" prefHeight="60" prefWidth="280" wrapText="true"/>
+            <TextArea fx:id="noteArea" prefHeight="80" wrapText="true"/>
 
-            <Button text="Transfer" onAction="#handleTransfer" style="-fx-padding: 10; -fx-pref-width: 150;"/>
+            <Button fx:id="saveTransferBtn" text="Save Transfer"
+                    onAction="#handleSaveTransfer" maxWidth="Infinity"/>
+
+            <HBox fx:id="txEditButtons" spacing="8" visible="false" managed="false">
+                <Button text="Update" onAction="#handleUpdateTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                <Button text="Delete" onAction="#handleDeleteTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                <Button text="Cancel" onAction="#handleCancelTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            </HBox>
+
         </VBox>
 
-        <TableView fx:id="transfersTable" VBox.vgrow="ALWAYS" prefWidth="500">
+        <TableView fx:id="transfersTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
             <columns>
-                <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
-                <TableColumn fx:id="dateColumn" text="Date" prefWidth="100"/>
-                <TableColumn fx:id="amountColumn" text="Amount" prefWidth="100"/>
-                <TableColumn fx:id="fromColumn" text="From" prefWidth="120"/>
-                <TableColumn fx:id="toColumn" text="To" prefWidth="120"/>
-                <TableColumn fx:id="noteColumn" text="Note" prefWidth="150"/>
+                <TableColumn fx:id="dateColumn"   text="Date"   prefWidth="95"/>
+                <TableColumn fx:id="typeColumn"   text="Type"   prefWidth="80"/>
+                <TableColumn fx:id="fromColumn"   text="From"   prefWidth="130"/>
+                <TableColumn fx:id="toColumn"     text="To"     prefWidth="130"/>
+                <TableColumn fx:id="amountColumn" text="Amount" prefWidth="90"/>
+                <TableColumn fx:id="noteColumn"   text="Note"   minWidth="150"/>
             </columns>
+            <placeholder><Label text="No transfers yet"/></placeholder>
         </TableView>
+
     </HBox>
 </VBox>

@@ -77,7 +77,6 @@ public class TransactionService {
 
         BigDecimal diff = newAmount.subtract(tx.getAmount());
 
-        // Reverse old and apply new balance difference
         if (tx.getType() == Transaction.TransactionType.INCOME) {
             Account acc = accountRepository.findById(tx.getToAccountId()).orElseThrow();
             acc.setBalance(acc.getBalance().add(diff));
@@ -86,6 +85,13 @@ public class TransactionService {
             Account acc = accountRepository.findById(tx.getFromAccountId()).orElseThrow();
             acc.setBalance(acc.getBalance().subtract(diff));
             accountRepository.save(acc);
+        } else if (tx.getType() == Transaction.TransactionType.TRANSFER) {
+            Account from = accountRepository.findById(tx.getFromAccountId()).orElseThrow();
+            Account to = accountRepository.findById(tx.getToAccountId()).orElseThrow();
+            from.setBalance(from.getBalance().subtract(diff));
+            to.setBalance(to.getBalance().add(diff));
+            accountRepository.save(from);
+            accountRepository.save(to);
         }
 
         tx.setDate(date);
