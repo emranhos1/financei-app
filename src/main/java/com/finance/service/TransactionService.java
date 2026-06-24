@@ -29,7 +29,7 @@ public class TransactionService {
         accountRepository.save(toAccount);
 
         return transactionRepository.save(Transaction.builder()
-                .userId(userId).date(date).type(Transaction.TransactionType.income)
+                .userId(userId).date(date).type(Transaction.TransactionType.INCOME)
                 .amount(amount).toAccountId(toAccountId).categoryId(categoryId).note(note).build());
     }
 
@@ -43,7 +43,7 @@ public class TransactionService {
         accountRepository.save(fromAccount);
 
         return transactionRepository.save(Transaction.builder()
-                .userId(userId).date(date).type(Transaction.TransactionType.expense)
+                .userId(userId).date(date).type(Transaction.TransactionType.EXPENSE)
                 .amount(amount).fromAccountId(fromAccountId).categoryId(categoryId).note(note).build());
     }
 
@@ -65,7 +65,7 @@ public class TransactionService {
         accountRepository.save(toAccount);
 
         return transactionRepository.save(Transaction.builder()
-                .userId(userId).date(date).type(Transaction.TransactionType.transfer)
+                .userId(userId).date(date).type(Transaction.TransactionType.TRANSFER)
                 .amount(amount).fromAccountId(fromAccountId).toAccountId(toAccountId).note(note).build());
     }
 
@@ -78,11 +78,11 @@ public class TransactionService {
         BigDecimal diff = newAmount.subtract(tx.getAmount());
 
         // Reverse old and apply new balance difference
-        if (tx.getType() == Transaction.TransactionType.income) {
+        if (tx.getType() == Transaction.TransactionType.INCOME) {
             Account acc = accountRepository.findById(tx.getToAccountId()).orElseThrow();
             acc.setBalance(acc.getBalance().add(diff));
             accountRepository.save(acc);
-        } else if (tx.getType() == Transaction.TransactionType.expense) {
+        } else if (tx.getType() == Transaction.TransactionType.EXPENSE) {
             Account acc = accountRepository.findById(tx.getFromAccountId()).orElseThrow();
             acc.setBalance(acc.getBalance().subtract(diff));
             accountRepository.save(acc);
@@ -101,17 +101,17 @@ public class TransactionService {
         if (!tx.getUserId().equals(userId)) throw new IllegalArgumentException("Access denied");
 
         // Reverse balance effect
-        if (tx.getType() == Transaction.TransactionType.income && tx.getToAccountId() != null) {
+        if (tx.getType() == Transaction.TransactionType.INCOME && tx.getToAccountId() != null) {
             accountRepository.findById(tx.getToAccountId()).ifPresent(acc -> {
                 acc.setBalance(acc.getBalance().subtract(tx.getAmount()));
                 accountRepository.save(acc);
             });
-        } else if (tx.getType() == Transaction.TransactionType.expense && tx.getFromAccountId() != null) {
+        } else if (tx.getType() == Transaction.TransactionType.EXPENSE && tx.getFromAccountId() != null) {
             accountRepository.findById(tx.getFromAccountId()).ifPresent(acc -> {
                 acc.setBalance(acc.getBalance().add(tx.getAmount()));
                 accountRepository.save(acc);
             });
-        } else if (tx.getType() == Transaction.TransactionType.transfer) {
+        } else if (tx.getType() == Transaction.TransactionType.TRANSFER) {
             if (tx.getFromAccountId() != null) accountRepository.findById(tx.getFromAccountId()).ifPresent(acc -> {
                 acc.setBalance(acc.getBalance().add(tx.getAmount()));
                 accountRepository.save(acc);

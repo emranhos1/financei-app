@@ -64,6 +64,6 @@ public class Transaction {
     }
 
     public enum TransactionType {
-        income, expense, transfer
+        INCOME, EXPENSE, TRANSFER
     }
 }

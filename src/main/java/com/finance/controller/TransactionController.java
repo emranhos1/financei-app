@@ -30,20 +30,24 @@ public class TransactionController {
     private final AccountService accountService;
     private final CategoryService categoryService;
 
-    @FXML private ComboBox<String> typeComboBox;
+    @FXML private RadioButton incomeRadio;
+    @FXML private RadioButton expenseRadio;
+    @FXML private ToggleGroup typeToggleGroup;
     @FXML private DatePicker datePicker;
     @FXML private ComboBox<Account> accountComboBox;
     @FXML private ComboBox<Category> categoryComboBox;
     @FXML private TextField amountField;
     @FXML private TextArea noteArea;
+    @FXML private Button saveTransactionBtn;
+    @FXML private HBox txEditButtons;
 
     @FXML private TableView<Transaction> transactionsTable;
-    @FXML private TableColumn<Transaction, Long> idColumn;
     @FXML private TableColumn<Transaction, LocalDate> dateColumn;
     @FXML private TableColumn<Transaction, String> typeColumn;
     @FXML private TableColumn<Transaction, String> accountColumn;
     @FXML private TableColumn<Transaction, String> categoryColumn;
     @FXML private TableColumn<Transaction, BigDecimal> amountColumn;
+    @FXML private TableColumn<Transaction, String> noteColumn;
 
     @FXML private TableView<Category> categoriesTable;
     @FXML private TableColumn<Category, Long> catIdColumn;
@@ -63,20 +67,18 @@ public class TransactionController {
         setupTransactionTable();
         setupCategoryTable();
 
-        typeComboBox.setItems(FXCollections.observableArrayList("Income", "Expense"));
-        typeComboBox.setOnAction(e -> refreshDropdowns());
+        typeToggleGroup.selectedToggleProperty().addListener((obs, o, n) -> refreshDropdowns());
         datePicker.setValue(LocalDate.now());
 
         catTypeComboBox.setItems(FXCollections.observableArrayList(Category.CategoryType.values()));
         catTypeComboBox.setConverter(new StringConverter<Category.CategoryType>() {
-            public String toString(Category.CategoryType t) {
-                return t == null ? "" : t.name();
-            }
+            public String toString(Category.CategoryType t) { return t == null ? "" : t.name(); }
             public Category.CategoryType fromString(String s) { return null; }
         });
 
         loadTransactions();
         loadCategories();
+        resetTransactionForm();
         resetCategoryForm();
     }
 
@@ -96,34 +98,38 @@ public class TransactionController {
         });
     }
 
+    private String getSelectedType() {
+        if (incomeRadio.isSelected()) return "INCOME";
+        if (expenseRadio.isSelected()) return "EXPENSE";
+        return null;
+    }
+
     private void refreshDropdowns() {
         Long userId = sessionContext.getCurrentUserId();
-        String type = typeComboBox.getValue();
-        List<Account> accounts = accountService.getAccountsByUserId(userId);
-        accountComboBox.setItems(FXCollections.observableArrayList(accounts));
+        String type = getSelectedType();
+        accountComboBox.setItems(FXCollections.observableArrayList(accountService.getAccountsByUserId(userId)));
         accountComboBox.setValue(null);
-        if ("Income".equals(type)) {
+        if ("INCOME".equals(type)) {
             categoryComboBox.setItems(FXCollections.observableArrayList(categoryService.getIncomeCategories(userId)));
-        } else if ("Expense".equals(type)) {
+        } else if ("EXPENSE".equals(type)) {
             categoryComboBox.setItems(FXCollections.observableArrayList(categoryService.getExpenseCategories(userId)));
         }
         categoryComboBox.setValue(null);
     }
 
     private void setupTransactionTable() {
-        idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
         amountColumn.setCellValueFactory(new PropertyValueFactory<>("amount"));
-        typeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().name()));
+        noteColumn.setCellValueFactory(new PropertyValueFactory<>("note"));
+
+        typeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().name().toUpperCase()));
 
         accountColumn.setCellValueFactory(cd -> {
             Transaction tx = cd.getValue();
-            Long accId = tx.getType() == Transaction.TransactionType.income ? tx.getToAccountId() : tx.getFromAccountId();
+            Long accId = tx.getType() == Transaction.TransactionType.INCOME ? tx.getToAccountId() : tx.getFromAccountId();
             if (accId == null) return new SimpleStringProperty("-");
-            try {
-                Account acc = accountService.getAccountById(accId);
-                return new SimpleStringProperty(acc.getName() + " [" + acc.getAccountType().getName() + "]");
-            } catch (Exception e) { return new SimpleStringProperty("-"); }
+            try { return new SimpleStringProperty(accountService.getAccountById(accId).getName()); }
+            catch (Exception e) { return new SimpleStringProperty("-"); }
         });
 
         categoryColumn.setCellValueFactory(cd -> {
@@ -145,22 +151,31 @@ public class TransactionController {
 
     private void populateFormForEdit(Transaction tx) {
         selectedTransaction = tx;
-        String type = tx.getType() == Transaction.TransactionType.income ? "Income" : "Expense";
-        typeComboBox.setValue(type);
+        if (tx.getType() == Transaction.TransactionType.INCOME) {
+            incomeRadio.setSelected(true);
+        } else {
+            expenseRadio.setSelected(true);
+        }
         refreshDropdowns();
         datePicker.setValue(tx.getDate());
         amountField.setText(tx.getAmount().toPlainString());
         noteArea.setText(tx.getNote() != null ? tx.getNote() : "");
-        Long accId = tx.getType() == Transaction.TransactionType.income ? tx.getToAccountId() : tx.getFromAccountId();
+
+        Long accId = tx.getType() == Transaction.TransactionType.INCOME ? tx.getToAccountId() : tx.getFromAccountId();
         if (accId != null) accountComboBox.getItems().stream()
                 .filter(a -> a.getId().equals(accId)).findFirst().ifPresent(accountComboBox::setValue);
         if (tx.getCategoryId() != null) categoryComboBox.getItems().stream()
                 .filter(c -> c.getId().equals(tx.getCategoryId())).findFirst().ifPresent(categoryComboBox::setValue);
+
+        saveTransactionBtn.setVisible(false);
+        saveTransactionBtn.setManaged(false);
+        txEditButtons.setVisible(true);
+        txEditButtons.setManaged(true);
     }
 
     @FXML
     public void handleSaveTransaction() {
-        String type = typeComboBox.getValue();
+        String type = getSelectedType();
         LocalDate date = datePicker.getValue();
         String amountStr = amountField.getText().trim();
         Account account = accountComboBox.getValue();
@@ -169,20 +184,41 @@ public class TransactionController {
         if (type == null || date == null || amountStr.isEmpty() || account == null) {
             showAlert("Validation Error", "Type, Date, Account and Amount are required"); return;
         }
+        if (!confirm("Save this transaction?")) return;
         try {
             BigDecimal amount = new BigDecimal(amountStr);
             Long userId = sessionContext.getCurrentUserId();
             Long categoryId = category != null ? category.getId() : null;
-            if (selectedTransaction != null) {
-                transactionService.updateTransaction(selectedTransaction.getId(), userId, date, amount, categoryId, note);
+            if ("INCOME".equals(type)) {
+                transactionService.recordIncomeTransaction(userId, date, amount, account.getId(), categoryId, note);
             } else {
-                if ("Income".equals(type)) {
-                    transactionService.recordIncomeTransaction(userId, date, amount, account.getId(), categoryId, note);
-                } else {
-                    transactionService.recordExpenseTransaction(userId, date, amount, account.getId(), categoryId, note);
-                }
+                transactionService.recordExpenseTransaction(userId, date, amount, account.getId(), categoryId, note);
             }
-            clearTransactionForm();
+            resetTransactionForm();
+            loadTransactions();
+        } catch (NumberFormatException e) {
+            showAlert("Validation Error", "Amount must be a valid number");
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
+
+    @FXML
+    public void handleUpdateTransaction() {
+        if (selectedTransaction == null) return;
+        String type = getSelectedType();
+        LocalDate date = datePicker.getValue();
+        String amountStr = amountField.getText().trim();
+        Account account = accountComboBox.getValue();
+        Category category = categoryComboBox.getValue();
+        String note = noteArea.getText().trim();
+        if (type == null || date == null || amountStr.isEmpty() || account == null) {
+            showAlert("Validation Error", "Type, Date, Account and Amount are required"); return;
+        }
+        if (!confirm("Update this transaction?")) return;
+        try {
+            BigDecimal amount = new BigDecimal(amountStr);
+            Long categoryId = category != null ? category.getId() : null;
+            transactionService.updateTransaction(selectedTransaction.getId(), sessionContext.getCurrentUserId(), date, amount, categoryId, note);
+            resetTransactionForm();
             loadTransactions();
         } catch (NumberFormatException e) {
             showAlert("Validation Error", "Amount must be a valid number");
@@ -191,22 +227,21 @@ public class TransactionController {
 
     @FXML
     public void handleDeleteTransaction() {
-        Transaction sel = transactionsTable.getSelectionModel().getSelectedItem();
-        if (sel == null) { showAlert("Error", "Select a transaction to delete"); return; }
-        if (confirm("Delete this transaction? The account balance will be reversed.")) {
-            try {
-                transactionService.deleteTransaction(sel.getId(), sessionContext.getCurrentUserId());
-                clearTransactionForm(); loadTransactions();
-            } catch (Exception e) { showAlert("Error", e.getMessage()); }
-        }
+        if (selectedTransaction == null) return;
+        if (!confirm("Delete this transaction? The account balance will be reversed.")) return;
+        try {
+            transactionService.deleteTransaction(selectedTransaction.getId(), sessionContext.getCurrentUserId());
+            resetTransactionForm();
+            loadTransactions();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 
     @FXML
-    public void handleClearForm() { clearTransactionForm(); }
+    public void handleCancelTransaction() { resetTransactionForm(); }
 
-    private void clearTransactionForm() {
+    private void resetTransactionForm() {
         selectedTransaction = null;
-        typeComboBox.setValue(null);
+        typeToggleGroup.selectToggle(null);
         datePicker.setValue(LocalDate.now());
         amountField.clear();
         accountComboBox.setItems(FXCollections.observableArrayList());
@@ -215,16 +250,16 @@ public class TransactionController {
         categoryComboBox.setValue(null);
         noteArea.clear();
         transactionsTable.getSelectionModel().clearSelection();
+        saveTransactionBtn.setVisible(true);
+        saveTransactionBtn.setManaged(true);
+        txEditButtons.setVisible(false);
+        txEditButtons.setManaged(false);
     }
-
-    // ===== CATEGORIES =====
 
     private void setupCategoryTable() {
         catIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         catNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        catTypeColumn.setCellValueFactory(cd -> {
-            return new SimpleStringProperty(cd.getValue().getType().name());
-        });
+        catTypeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().name()));
 
         categoriesTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
             if (sel != null) {
@@ -272,10 +307,10 @@ public class TransactionController {
     public void handleDeleteCategory() {
         Category sel = categoriesTable.getSelectionModel().getSelectedItem();
         if (sel == null) return;
-        if (confirm("Delete category '" + sel.getName() + "'?")) {
-            try { categoryService.deleteCategory(sel.getId()); resetCategoryForm(); loadCategories();
-            } catch (Exception e) { showAlert("Error", e.getMessage()); }
-        }
+        if (!confirm("Delete category '" + sel.getName() + "'?")) return;
+        try {
+            categoryService.deleteCategory(sel.getId()); resetCategoryForm(); loadCategories();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 
     @FXML

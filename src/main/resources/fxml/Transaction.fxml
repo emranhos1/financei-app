@@ -11,16 +11,21 @@
 
     <TabPane VBox.vgrow="ALWAYS">
 
-        <!-- ===== TAB 1: Record Transaction ===== -->
         <Tab text="Record Transaction" closable="false">
             <HBox spacing="15" style="-fx-padding: 10;">
 
                 <VBox spacing="8" prefWidth="270">
-                    <Label text="Type"/>
-                    <ComboBox fx:id="typeComboBox" prefWidth="250"/>
 
                     <Label text="Date"/>
                     <DatePicker fx:id="datePicker" prefWidth="250"/>
+
+                    <Label text="Type"/>
+                    <HBox spacing="15">
+                        <RadioButton fx:id="incomeRadio" text="INCOME">
+                            <toggleGroup><ToggleGroup fx:id="typeToggleGroup"/></toggleGroup>
+                        </RadioButton>
+                        <RadioButton fx:id="expenseRadio" text="EXPENSE" toggleGroup="$typeToggleGroup"/>
+                    </HBox>
 
                     <Label text="Account"/>
                     <ComboBox fx:id="accountComboBox" prefWidth="250"/>
@@ -34,28 +39,32 @@
                     <Label text="Note"/>
                     <TextArea fx:id="noteArea" prefHeight="60" wrapText="true"/>
 
-                    <HBox spacing="8">
-                        <Button text="Save"   onAction="#handleSaveTransaction" prefWidth="80"/>
-                        <Button text="Delete" onAction="#handleDeleteTransaction" prefWidth="80"/>
-                        <Button text="Clear"  onAction="#handleClearForm" prefWidth="80"/>
+                    <Button fx:id="saveTransactionBtn" text="Save Transaction"
+                            onAction="#handleSaveTransaction" maxWidth="Infinity"/>
+
+                    <HBox fx:id="txEditButtons" spacing="8" visible="false" managed="false">
+                        <Button text="Update" onAction="#handleUpdateTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Delete" onAction="#handleDeleteTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Cancel" onAction="#handleCancelTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                     </HBox>
+
                 </VBox>
 
                 <TableView fx:id="transactionsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                     <columns>
-                        <TableColumn fx:id="idColumn"       text="ID"       prefWidth="50"/>
                         <TableColumn fx:id="dateColumn"     text="Date"     prefWidth="95"/>
-                        <TableColumn fx:id="typeColumn"     text="Type"     prefWidth="75"/>
-                        <TableColumn fx:id="accountColumn"  text="Account"  prefWidth="130"/>
-                        <TableColumn fx:id="categoryColumn" text="Category" prefWidth="110"/>
-                        <TableColumn fx:id="amountColumn"   text="Amount"   prefWidth="100"/>
+                        <TableColumn fx:id="typeColumn"     text="Type"     prefWidth="80"/>
+                        <TableColumn fx:id="accountColumn"  text="Account"  prefWidth="140"/>
+                        <TableColumn fx:id="categoryColumn" text="Category" prefWidth="120"/>
+                        <TableColumn fx:id="amountColumn"   text="Amount"   prefWidth="90"/>
+                        <TableColumn fx:id="noteColumn"     text="Note"     minWidth="150"/>
                     </columns>
                     <placeholder><Label text="No transactions yet"/></placeholder>
                 </TableView>
+
             </HBox>
         </Tab>
 
-        <!-- ===== TAB 2: Categories ===== -->
         <Tab text="Categories" closable="false">
             <HBox spacing="15" style="-fx-padding: 10;">
 
@@ -66,10 +75,8 @@
                     <Label text="Type"/>
                     <ComboBox fx:id="catTypeComboBox" maxWidth="Infinity"/>
 
-                    <!-- Add: shown by default -->
                     <Button fx:id="catAddBtn" text="Add Category" onAction="#handleAddCategory" maxWidth="Infinity"/>
 
-                    <!-- Update/Delete/Cancel: hidden by default -->
                     <HBox fx:id="catEditButtons" spacing="8" managed="false" visible="false">
                         <Button text="Update" onAction="#handleUpdateCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                         <Button text="Delete" onAction="#handleDeleteCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
@@ -85,6 +92,7 @@
                     </columns>
                     <placeholder><Label text="No categories yet. Add some!"/></placeholder>
                 </TableView>
+
             </HBox>
         </Tab>
 

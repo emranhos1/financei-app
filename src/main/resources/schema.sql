@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS transactions (
                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                             user_id BIGINT NOT NULL,
                                             date DATE NOT NULL,
-                                            type ENUM('income', 'expense', 'transfer') NOT NULL,
+                                            type ENUM('INCOME', 'EXPENSE', 'TRANSFER') NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
     category_id BIGINT,
     from_account_id BIGINT,

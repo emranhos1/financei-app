@@ -88,7 +88,7 @@ public class TransferController {
 
     private void loadTransfers() {
         List<Transaction> transfers = transactionService.getTransactionsByType(
-                sessionContext.getCurrentUserId(), Transaction.TransactionType.transfer);
+                sessionContext.getCurrentUserId(), Transaction.TransactionType.TRANSFER);
         transfersTable.setItems(FXCollections.observableArrayList(transfers));
     }
 
