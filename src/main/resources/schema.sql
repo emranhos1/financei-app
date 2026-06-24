@@ -66,3 +66,21 @@ CREATE TABLE IF NOT EXISTS transactions (
     INDEX idx_from_account (from_account_id),
     INDEX idx_to_account (to_account_id)
     );
+
+CREATE TABLE IF NOT EXISTS account_logs (
+                                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                            account_id BIGINT NOT NULL,
+                                            user_id BIGINT NOT NULL,
+                                            change_type ENUM('CREDIT', 'DEBIT', 'ADJUSTMENT') NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    balance_before DECIMAL(15, 2) NOT NULL,
+    balance_after DECIMAL(15, 2) NOT NULL,
+    reference_type ENUM('INCOME', 'EXPENSE', 'TRANSFER', 'MANUAL') NOT NULL,
+    reference_id BIGINT,
+    note VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_account_id (account_id),
+    INDEX idx_user_id (user_id)
+    );

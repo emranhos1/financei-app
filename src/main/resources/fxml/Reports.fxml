@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.finance.controller.ReportsController"
@@ -19,34 +16,52 @@
         <DatePicker fx:id="startDatePicker"/>
         <Label text="End:"/>
         <DatePicker fx:id="endDatePicker"/>
-        <Button text="Generate" onAction="#handleGenerateReport" style="-fx-padding: 8;"/>
+        <Button text="Generate" onAction="#handleGenerateReport"/>
     </HBox>
 
-    <VBox style="-fx-border-color: #cccccc; -fx-padding: 10;">
-        <GridPane hgap="30" vgap="10">
-            <Label text="Total Income:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-            <Label fx:id="totalIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+    <VBox style="-fx-border-color: #cccccc; -fx-padding: 10; -fx-background-color: #ffffff;">
+        <GridPane hgap="30" vgap="8">
+            <Label text="Total Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="totalIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
             <Label text="Total Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
             <Label fx:id="totalExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
-            <Label text="Net Income:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-            <Label fx:id="netIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+            <Label text="Net Income:"    GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="netIncomeLabel"    text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
         </GridPane>
     </VBox>
 
     <Label text="Expense by Category" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
-    <TableView fx:id="categoryTable" prefHeight="150">
+    <TableView fx:id="categoryTable" prefHeight="130">
         <columns>
-            <TableColumn fx:id="categoryNameColumn" text="Category" prefWidth="200"/>
-            <TableColumn fx:id="categoryAmountColumn" text="Amount" prefWidth="150"/>
+            <TableColumn fx:id="categoryNameColumn"   text="Category" prefWidth="200"/>
+            <TableColumn fx:id="categoryAmountColumn" text="Amount"   prefWidth="150"/>
         </columns>
+        <placeholder><Label text="No data"/></placeholder>
     </TableView>
 
     <Label text="Account Balances" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
-    <TableView fx:id="accountTable" prefHeight="150">
+    <TableView fx:id="accountTable" prefHeight="120">
         <columns>
-            <TableColumn fx:id="accountNameColumn" text="Account" prefWidth="150"/>
-            <TableColumn fx:id="accountTypeColumn" text="Type" prefWidth="100"/>
+            <TableColumn fx:id="accountNameColumn"    text="Account" prefWidth="150"/>
+            <TableColumn fx:id="accountTypeColumn"    text="Type"    prefWidth="100"/>
             <TableColumn fx:id="accountBalanceColumn" text="Balance" prefWidth="150"/>
         </columns>
+        <placeholder><Label text="No accounts"/></placeholder>
     </TableView>
+
+    <Label text="Account Log" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+    <ComboBox fx:id="accountLogComboBox" prefWidth="250" promptText="Select account to view log"/>
+    <TableView fx:id="accountLogTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="logDateColumn"          text="Date &amp; Time"    prefWidth="150"/>
+            <TableColumn fx:id="logChangeTypeColumn"    text="Change"         prefWidth="90"/>
+            <TableColumn fx:id="logRefTypeColumn"       text="Reference"      prefWidth="90"/>
+            <TableColumn fx:id="logAmountColumn"        text="Amount"         prefWidth="100"/>
+            <TableColumn fx:id="logBalanceBeforeColumn" text="Balance Before" prefWidth="120"/>
+            <TableColumn fx:id="logBalanceAfterColumn"  text="Balance After"  prefWidth="120"/>
+            <TableColumn fx:id="logNoteColumn"          text="Note"           minWidth="150"/>
+        </columns>
+        <placeholder><Label text="Select an account to view its log"/></placeholder>
+    </TableView>
+
 </VBox>
