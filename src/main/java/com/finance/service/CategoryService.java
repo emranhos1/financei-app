@@ -31,21 +31,18 @@ public class CategoryService {
     }
 
     public List<Category> getIncomeCategories(Long userId) {
-        // income + both
         return categoryRepository.findByUserIdAndTypeIn(userId,
-                List.of(Category.CategoryType.income, Category.CategoryType.both));
+                List.of(Category.CategoryType.INCOME, Category.CategoryType.BOTH));
     }
 
     public List<Category> getExpenseCategories(Long userId) {
-        // expense + both
         return categoryRepository.findByUserIdAndTypeIn(userId,
-                List.of(Category.CategoryType.expense, Category.CategoryType.both));
+                List.of(Category.CategoryType.EXPENSE, Category.CategoryType.BOTH));
     }
 
     public Category updateCategory(Long categoryId, Long userId, String name, Category.CategoryType type) {
         Category category = getCategoryById(categoryId);
         if (!category.getUserId().equals(userId)) throw new SecurityException("Access denied");
-
         boolean nameChanged = !category.getName().equals(name.trim());
         boolean typeChanged = category.getType() != type;
         if (nameChanged || typeChanged) {

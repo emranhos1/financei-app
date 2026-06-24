@@ -1,4 +1,3 @@
--- Users table
 CREATE TABLE IF NOT EXISTS users (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      username VARCHAR(50) UNIQUE NOT NULL,
@@ -9,7 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     );
 
--- Account Types table (per-user, dynamic)
 CREATE TABLE IF NOT EXISTS account_types (
                                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                              user_id BIGINT NOT NULL,
@@ -19,7 +17,6 @@ CREATE TABLE IF NOT EXISTS account_types (
     UNIQUE KEY uk_user_type (user_id, name)
     );
 
--- Accounts table — account_type_id FK to account_types
 CREATE TABLE IF NOT EXISTS accounts (
                                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                         user_id BIGINT NOT NULL,
@@ -35,21 +32,19 @@ CREATE TABLE IF NOT EXISTS accounts (
     INDEX idx_user_id (user_id)
     );
 
--- Categories table
 CREATE TABLE IF NOT EXISTS categories (
                                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                           user_id BIGINT NOT NULL,
                                           name VARCHAR(100) NOT NULL,
-    type ENUM('income', 'expense', 'both') NOT NULL,
+    type ENUM('INCOME', 'EXPENSE', 'BOTH') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
     UNIQUE KEY uk_user_category (user_id, name, type)
     );
 
-ALTER TABLE categories MODIFY COLUMN type ENUM('income', 'expense', 'both') NOT NULL;
+ALTER TABLE categories MODIFY COLUMN type ENUM('INCOME', 'EXPENSE', 'BOTH') NOT NULL;
 
--- Transactions table
 CREATE TABLE IF NOT EXISTS transactions (
                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                             user_id BIGINT NOT NULL,

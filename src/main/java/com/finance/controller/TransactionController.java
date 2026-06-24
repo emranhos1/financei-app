@@ -12,6 +12,7 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -49,7 +50,9 @@ public class TransactionController {
     @FXML private TableColumn<Category, String> catNameColumn;
     @FXML private TableColumn<Category, String> catTypeColumn;
     @FXML private TextField catNameField;
-    @FXML private ComboBox<String> catTypeComboBox;
+    @FXML private ComboBox<Category.CategoryType> catTypeComboBox;
+    @FXML private Button catAddBtn;
+    @FXML private HBox catEditButtons;
 
     private Transaction selectedTransaction = null;
 
@@ -63,10 +66,18 @@ public class TransactionController {
         typeComboBox.setItems(FXCollections.observableArrayList("Income", "Expense"));
         typeComboBox.setOnAction(e -> refreshDropdowns());
         datePicker.setValue(LocalDate.now());
-        catTypeComboBox.setItems(FXCollections.observableArrayList("income", "expense", "both"));
+
+        catTypeComboBox.setItems(FXCollections.observableArrayList(Category.CategoryType.values()));
+        catTypeComboBox.setConverter(new StringConverter<Category.CategoryType>() {
+            public String toString(Category.CategoryType t) {
+                return t == null ? "" : t.name();
+            }
+            public Category.CategoryType fromString(String s) { return null; }
+        });
 
         loadTransactions();
         loadCategories();
+        resetCategoryForm();
     }
 
     private void setupAccountComboBox() {
@@ -88,11 +99,9 @@ public class TransactionController {
     private void refreshDropdowns() {
         Long userId = sessionContext.getCurrentUserId();
         String type = typeComboBox.getValue();
-
         List<Account> accounts = accountService.getAccountsByUserId(userId);
         accountComboBox.setItems(FXCollections.observableArrayList(accounts));
         accountComboBox.setValue(null);
-
         if ("Income".equals(type)) {
             categoryComboBox.setItems(FXCollections.observableArrayList(categoryService.getIncomeCategories(userId)));
         } else if ("Expense".equals(type)) {
@@ -105,14 +114,11 @@ public class TransactionController {
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
         amountColumn.setCellValueFactory(new PropertyValueFactory<>("amount"));
-
-        typeColumn.setCellValueFactory(cd ->
-                new SimpleStringProperty(cd.getValue().getType().name()));
+        typeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().name()));
 
         accountColumn.setCellValueFactory(cd -> {
             Transaction tx = cd.getValue();
-            Long accId = tx.getType() == Transaction.TransactionType.income
-                    ? tx.getToAccountId() : tx.getFromAccountId();
+            Long accId = tx.getType() == Transaction.TransactionType.income ? tx.getToAccountId() : tx.getFromAccountId();
             if (accId == null) return new SimpleStringProperty("-");
             try {
                 Account acc = accountService.getAccountById(accId);
@@ -145,11 +151,9 @@ public class TransactionController {
         datePicker.setValue(tx.getDate());
         amountField.setText(tx.getAmount().toPlainString());
         noteArea.setText(tx.getNote() != null ? tx.getNote() : "");
-
         Long accId = tx.getType() == Transaction.TransactionType.income ? tx.getToAccountId() : tx.getFromAccountId();
         if (accId != null) accountComboBox.getItems().stream()
                 .filter(a -> a.getId().equals(accId)).findFirst().ifPresent(accountComboBox::setValue);
-
         if (tx.getCategoryId() != null) categoryComboBox.getItems().stream()
                 .filter(c -> c.getId().equals(tx.getCategoryId())).findFirst().ifPresent(categoryComboBox::setValue);
     }
@@ -162,7 +166,6 @@ public class TransactionController {
         Account account = accountComboBox.getValue();
         Category category = categoryComboBox.getValue();
         String note = noteArea.getText().trim();
-
         if (type == null || date == null || amountStr.isEmpty() || account == null) {
             showAlert("Validation Error", "Type, Date, Account and Amount are required"); return;
         }
@@ -170,7 +173,6 @@ public class TransactionController {
             BigDecimal amount = new BigDecimal(amountStr);
             Long userId = sessionContext.getCurrentUserId();
             Long categoryId = category != null ? category.getId() : null;
-
             if (selectedTransaction != null) {
                 transactionService.updateTransaction(selectedTransaction.getId(), userId, date, amount, categoryId, note);
             } else {
@@ -184,9 +186,7 @@ public class TransactionController {
             loadTransactions();
         } catch (NumberFormatException e) {
             showAlert("Validation Error", "Amount must be a valid number");
-        } catch (Exception e) {
-            showAlert("Error", e.getMessage());
-        }
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 
     @FXML
@@ -196,8 +196,7 @@ public class TransactionController {
         if (confirm("Delete this transaction? The account balance will be reversed.")) {
             try {
                 transactionService.deleteTransaction(sel.getId(), sessionContext.getCurrentUserId());
-                clearTransactionForm();
-                loadTransactions();
+                clearTransactionForm(); loadTransactions();
             } catch (Exception e) { showAlert("Error", e.getMessage()); }
         }
     }
@@ -218,15 +217,23 @@ public class TransactionController {
         transactionsTable.getSelectionModel().clearSelection();
     }
 
+    // ===== CATEGORIES =====
+
     private void setupCategoryTable() {
         catIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         catNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        catTypeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().name()));
+        catTypeColumn.setCellValueFactory(cd -> {
+            return new SimpleStringProperty(cd.getValue().getType().name());
+        });
 
         categoriesTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
             if (sel != null) {
                 catNameField.setText(sel.getName());
-                catTypeComboBox.setValue(sel.getType().name());
+                catTypeComboBox.setValue(sel.getType());
+                catAddBtn.setVisible(false);
+                catAddBtn.setManaged(false);
+                catEditButtons.setVisible(true);
+                catEditButtons.setManaged(true);
             }
         });
     }
@@ -239,40 +246,49 @@ public class TransactionController {
     @FXML
     public void handleAddCategory() {
         String name = catNameField.getText().trim();
-        String type = catTypeComboBox.getValue();
+        Category.CategoryType type = catTypeComboBox.getValue();
         if (name.isEmpty() || type == null) { showAlert("Validation Error", "Name and type are required"); return; }
         try {
-            categoryService.createCategory(sessionContext.getCurrentUserId(), name, Category.CategoryType.valueOf(type));
-            clearCategoryForm(); loadCategories();
+            categoryService.createCategory(sessionContext.getCurrentUserId(), name, type);
+            resetCategoryForm(); loadCategories();
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 
     @FXML
     public void handleUpdateCategory() {
         Category sel = categoriesTable.getSelectionModel().getSelectedItem();
-        if (sel == null) { showAlert("Error", "Select a category to update"); return; }
+        if (sel == null) return;
         String name = catNameField.getText().trim();
-        String type = catTypeComboBox.getValue();
+        Category.CategoryType type = catTypeComboBox.getValue();
         if (name.isEmpty() || type == null) { showAlert("Validation Error", "Name and type are required"); return; }
+        if (!confirm("Update category '" + sel.getName() + "'?")) return;
         try {
-            categoryService.updateCategory(sel.getId(), sessionContext.getCurrentUserId(), name, Category.CategoryType.valueOf(type));
-            clearCategoryForm(); loadCategories();
+            categoryService.updateCategory(sel.getId(), sessionContext.getCurrentUserId(), name, type);
+            resetCategoryForm(); loadCategories();
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 
     @FXML
     public void handleDeleteCategory() {
         Category sel = categoriesTable.getSelectionModel().getSelectedItem();
-        if (sel == null) { showAlert("Error", "Select a category to delete"); return; }
+        if (sel == null) return;
         if (confirm("Delete category '" + sel.getName() + "'?")) {
-            try { categoryService.deleteCategory(sel.getId()); clearCategoryForm(); loadCategories();
+            try { categoryService.deleteCategory(sel.getId()); resetCategoryForm(); loadCategories();
             } catch (Exception e) { showAlert("Error", e.getMessage()); }
         }
     }
 
-    private void clearCategoryForm() {
-        catNameField.clear(); catTypeComboBox.setValue(null);
+    @FXML
+    public void handleCancelCategory() { resetCategoryForm(); }
+
+    private void resetCategoryForm() {
+        catNameField.clear();
+        catTypeComboBox.setValue(null);
         categoriesTable.getSelectionModel().clearSelection();
+        catAddBtn.setVisible(true);
+        catAddBtn.setManaged(true);
+        catEditButtons.setVisible(false);
+        catEditButtons.setManaged(false);
     }
 
     private boolean confirm(String msg) {
@@ -280,6 +296,7 @@ public class TransactionController {
         a.setTitle("Confirm"); a.setHeaderText(null); a.setContentText(msg);
         Optional<ButtonType> r = a.showAndWait(); return r.isPresent() && r.get() == ButtonType.OK;
     }
+
     private void showAlert(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
         a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();

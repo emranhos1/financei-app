@@ -11,13 +11,11 @@
 
     <TabPane VBox.vgrow="ALWAYS">
 
-        <!-- ===== TAB 1: Record / Edit Transaction ===== -->
+        <!-- ===== TAB 1: Record Transaction ===== -->
         <Tab text="Record Transaction" closable="false">
             <HBox spacing="15" style="-fx-padding: 10;">
 
-                <!-- Left: Form -->
                 <VBox spacing="8" prefWidth="270">
-
                     <Label text="Type"/>
                     <ComboBox fx:id="typeComboBox" prefWidth="250"/>
 
@@ -37,14 +35,12 @@
                     <TextArea fx:id="noteArea" prefHeight="60" wrapText="true"/>
 
                     <HBox spacing="8">
-                        <Button text="Save" onAction="#handleSaveTransaction" prefWidth="80"/>
+                        <Button text="Save"   onAction="#handleSaveTransaction" prefWidth="80"/>
                         <Button text="Delete" onAction="#handleDeleteTransaction" prefWidth="80"/>
-                        <Button text="Clear" onAction="#handleClearForm" prefWidth="80"/>
+                        <Button text="Clear"  onAction="#handleClearForm" prefWidth="80"/>
                     </HBox>
-
                 </VBox>
 
-                <!-- Right: Table -->
                 <TableView fx:id="transactionsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="idColumn"       text="ID"       prefWidth="50"/>
@@ -56,7 +52,6 @@
                     </columns>
                     <placeholder><Label text="No transactions yet"/></placeholder>
                 </TableView>
-
             </HBox>
         </Tab>
 
@@ -64,22 +59,24 @@
         <Tab text="Categories" closable="false">
             <HBox spacing="15" style="-fx-padding: 10;">
 
-                <!-- Left: Category Form -->
                 <VBox spacing="8" prefWidth="260">
                     <Label text="Category Name"/>
                     <TextField fx:id="catNameField" promptText="e.g. Salary, Food"/>
 
                     <Label text="Type"/>
-                    <ComboBox fx:id="catTypeComboBox" prefWidth="240"/>
+                    <ComboBox fx:id="catTypeComboBox" maxWidth="Infinity"/>
 
-                    <HBox spacing="8">
-                        <Button text="Add"    onAction="#handleAddCategory"/>
-                        <Button text="Update" onAction="#handleUpdateCategory"/>
-                        <Button text="Delete" onAction="#handleDeleteCategory"/>
+                    <!-- Add: shown by default -->
+                    <Button fx:id="catAddBtn" text="Add Category" onAction="#handleAddCategory" maxWidth="Infinity"/>
+
+                    <!-- Update/Delete/Cancel: hidden by default -->
+                    <HBox fx:id="catEditButtons" spacing="8" managed="false" visible="false">
+                        <Button text="Update" onAction="#handleUpdateCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Delete" onAction="#handleDeleteCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Cancel" onAction="#handleCancelCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                     </HBox>
                 </VBox>
 
-                <!-- Right: Category Table -->
                 <TableView fx:id="categoriesTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="catIdColumn"   text="ID"   prefWidth="60"/>
@@ -88,7 +85,6 @@
                     </columns>
                     <placeholder><Label text="No categories yet. Add some!"/></placeholder>
                 </TableView>
-
             </HBox>
         </Tab>
 
