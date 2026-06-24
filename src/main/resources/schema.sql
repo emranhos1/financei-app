@@ -19,18 +19,19 @@ CREATE TABLE IF NOT EXISTS account_types (
     UNIQUE KEY uk_user_type (user_id, name)
     );
 
--- Accounts table
+-- Accounts table — account_type_id FK to account_types
 CREATE TABLE IF NOT EXISTS accounts (
                                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                         user_id BIGINT NOT NULL,
                                         name VARCHAR(100) NOT NULL,
-    type VARCHAR(100) NOT NULL,
+    account_type_id BIGINT NOT NULL,
     balance DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
     maturity_date DATE,
     installment_amount DECIMAL(15, 2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_type_id) REFERENCES account_types(id),
     INDEX idx_user_id (user_id)
     );
 
@@ -46,7 +47,6 @@ CREATE TABLE IF NOT EXISTS categories (
     UNIQUE KEY uk_user_category (user_id, name, type)
     );
 
--- Alter existing categories table to add 'both' if it exists without it
 ALTER TABLE categories MODIFY COLUMN type ENUM('income', 'expense', 'both') NOT NULL;
 
 -- Transactions table

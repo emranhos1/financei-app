@@ -158,6 +158,10 @@ public class TransactionService {
         return transactionRepository.sumExpenseByCategory(userId, categoryId, startDate, endDate);
     }
 
+    public BigDecimal getIncomeByCategory(Long userId, Long categoryId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.sumIncomeByCategory(userId, categoryId, startDate, endDate);
+    }
+
     public BigDecimal getNetIncome(Long userId, LocalDate startDate, LocalDate endDate) {
         return getTotalIncome(userId, startDate, endDate).subtract(getTotalExpense(userId, startDate, endDate));
     }

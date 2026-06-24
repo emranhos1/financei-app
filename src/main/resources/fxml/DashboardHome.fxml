@@ -1,76 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
 
 <VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.finance.controller.DashboardHomeController"
-      spacing="20" style="-fx-padding: 20;">
+      styleClass="content-pane">
 
-    <Label text="Financial Summary" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
+    <Label text="Financial Summary" styleClass="page-title"/>
 
-    <!-- Row 1: Net Worth (full width) -->
-    <HBox>
-        <VBox style="-fx-border-color: #4a90d9; -fx-border-radius: 5; -fx-padding: 15; -fx-background-color: #eef4fb; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-            <Label text="Net Worth (Total)" style="-fx-font-size: 13; -fx-text-fill: #4a90d9;"/>
-            <Label fx:id="netWorthLabel" text="৳ 0.00" style="-fx-font-size: 26; -fx-font-weight: bold;"/>
+    <!-- Balance cards built dynamically in controller -->
+    <HBox fx:id="balanceCardsBox" spacing="12"/>
+
+    <!-- Period cards: Today | This Month | This Year -->
+    <HBox spacing="12">
+
+        <VBox styleClass="summary-card" HBox.hgrow="ALWAYS" spacing="6">
+            <Label text="Today" styleClass="card-title"/>
+            <HBox spacing="10">
+                <Label text="Income:"  styleClass="card-label"/>
+                <Label fx:id="todayIncomeLabel" text="৳ 0.00"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Expense:" styleClass="card-label"/>
+                <Label fx:id="todayExpenseLabel" text="৳ 0.00"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Net:" styleClass="card-label"/>
+                <Label fx:id="todayNetLabel" text="৳ 0.00" styleClass="net-label"/>
+            </HBox>
         </VBox>
+
+        <VBox styleClass="summary-card" HBox.hgrow="ALWAYS" spacing="6">
+            <Label text="This Month" styleClass="card-title"/>
+            <HBox spacing="10">
+                <Label text="Income:"  styleClass="card-label"/>
+                <Label fx:id="monthIncomeLabel" text="৳ 0.00"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Expense:" styleClass="card-label"/>
+                <Label fx:id="monthExpenseLabel" text="৳ 0.00"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Net:" styleClass="card-label"/>
+                <Label fx:id="monthNetLabel" text="৳ 0.00" styleClass="net-label"/>
+            </HBox>
+        </VBox>
+
+        <VBox styleClass="summary-card" HBox.hgrow="ALWAYS" spacing="6">
+            <Label text="This Year" styleClass="card-title"/>
+            <HBox spacing="10">
+                <Label text="Income:"  styleClass="card-label"/>
+                <Label fx:id="yearIncomeLabel" text="৳ 0.00"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Expense:" styleClass="card-label"/>
+                <Label fx:id="yearExpenseLabel" text="৳ 0.00"/>
+            </HBox>
+            <HBox spacing="10">
+                <Label text="Net:" styleClass="card-label"/>
+                <Label fx:id="yearNetLabel" text="৳ 0.00" styleClass="net-label"/>
+            </HBox>
+        </VBox>
+
     </HBox>
 
-    <!-- Row 2: Cash | Bank | DPS -->
-    <HBox spacing="15">
-        <VBox style="-fx-border-color: #cccccc; -fx-border-radius: 5; -fx-padding: 15; -fx-background-color: #ffffff; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-            <Label text="Cash in Hand" style="-fx-font-size: 13; -fx-text-fill: #666666;"/>
-            <Label fx:id="cashLabel" text="৳ 0.00" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
-        </VBox>
-        <VBox style="-fx-border-color: #cccccc; -fx-border-radius: 5; -fx-padding: 15; -fx-background-color: #ffffff; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-            <Label text="In Bank" style="-fx-font-size: 13; -fx-text-fill: #666666;"/>
-            <Label fx:id="bankLabel" text="৳ 0.00" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
-        </VBox>
-        <VBox style="-fx-border-color: #cccccc; -fx-border-radius: 5; -fx-padding: 15; -fx-background-color: #ffffff; -fx-background-radius: 5;" HBox.hgrow="ALWAYS">
-            <Label text="In DPS" style="-fx-font-size: 13; -fx-text-fill: #666666;"/>
-            <Label fx:id="dpsLabel" text="৳ 0.00" style="-fx-font-size: 20; -fx-font-weight: bold;"/>
-        </VBox>
-    </HBox>
+    <!-- Category breakdown -->
+    <VBox styleClass="summary-card" spacing="10">
+        <Label text="Category Breakdown" styleClass="card-title"/>
+        <ComboBox fx:id="categoryComboBox" prefWidth="300" promptText="— Select Category —"/>
 
-    <!-- Today -->
-    <VBox>
-        <Label text="Today" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
-        <GridPane hgap="20" vgap="8">
-            <Label text="Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-            <Label fx:id="todayIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-            <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-            <Label fx:id="todayExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-            <Label text="Net:"     GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-            <Label fx:id="todayNetLabel"     text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
-        </GridPane>
-    </VBox>
+        <GridPane hgap="24" vgap="8">
+            <Label text=""           GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label text="Income"     GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="card-title"/>
+            <Label text="Expense"    GridPane.columnIndex="2" GridPane.rowIndex="0" styleClass="card-title"/>
 
-    <!-- This Month -->
-    <VBox>
-        <Label text="This Month" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
-        <GridPane hgap="20" vgap="8">
-            <Label text="Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-            <Label fx:id="monthIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-            <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-            <Label fx:id="monthExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-            <Label text="Net:"     GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-            <Label fx:id="monthNetLabel"     text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
-        </GridPane>
-    </VBox>
+            <Label text="Today"      GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="card-label"/>
+            <Label fx:id="catTodayIncLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label fx:id="catTodayExpLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
 
-    <!-- This Year -->
-    <VBox>
-        <Label text="This Year" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
-        <GridPane hgap="20" vgap="8">
-            <Label text="Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-            <Label fx:id="yearIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-            <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-            <Label fx:id="yearExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-            <Label text="Net:"     GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-            <Label fx:id="yearNetLabel"     text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+            <Label text="This Month" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="card-label"/>
+            <Label fx:id="catMonthIncLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+            <Label fx:id="catMonthExpLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+
+            <Label text="This Year"  GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="card-label"/>
+            <Label fx:id="catYearIncLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+            <Label fx:id="catYearExpLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
         </GridPane>
     </VBox>
 

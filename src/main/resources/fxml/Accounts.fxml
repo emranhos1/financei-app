@@ -5,30 +5,34 @@
 
 <VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.finance.controller.AccountsController"
-      spacing="10" style="-fx-padding: 15;">
+      spacing="10" styleClass="content-pane">
 
-    <Label text="Manage Accounts" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+    <Label text="Manage Accounts" styleClass="page-title"/>
 
     <TabPane VBox.vgrow="ALWAYS">
 
         <!-- ===== TAB 1: Accounts ===== -->
         <Tab text="Accounts" closable="false">
-            <HBox spacing="15" style="-fx-padding: 10;">
+            <HBox spacing="15" styleClass="tab-content">
 
-                <VBox spacing="8" prefWidth="260">
+                <VBox spacing="8" styleClass="form-pane">
                     <Label text="Account Name"/>
                     <TextField fx:id="nameField" promptText="Enter account name"/>
 
                     <Label text="Account Type"/>
-                    <ComboBox fx:id="typeComboBox" prefWidth="240"/>
+                    <ComboBox fx:id="typeComboBox" maxWidth="Infinity"/>
 
                     <Label text="Initial Balance"/>
                     <TextField fx:id="balanceField" promptText="0.00"/>
 
-                    <HBox spacing="8">
-                        <Button text="Add"    onAction="#handleAddAccount"/>
-                        <Button text="Update" onAction="#handleUpdateAccount"/>
-                        <Button text="Delete" onAction="#handleDeleteAccount"/>
+                    <!-- Add button: shown by default -->
+                    <Button fx:id="accAddBtn" text="Add Account" onAction="#handleAddAccount" maxWidth="Infinity"/>
+
+                    <!-- Update/Delete/Cancel: hidden by default -->
+                    <HBox fx:id="accEditButtons" spacing="8" managed="false" visible="false">
+                        <Button text="Update" onAction="#handleUpdateAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Delete" onAction="#handleDeleteAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Cancel" onAction="#handleCancelAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                     </HBox>
                 </VBox>
 
@@ -46,16 +50,20 @@
 
         <!-- ===== TAB 2: Account Types ===== -->
         <Tab text="Account Types" closable="false">
-            <HBox spacing="15" style="-fx-padding: 10;">
+            <HBox spacing="15" styleClass="tab-content">
 
-                <VBox spacing="8" prefWidth="260">
+                <VBox spacing="8" styleClass="form-pane">
                     <Label text="Type Name"/>
                     <TextField fx:id="typeNameField" promptText="e.g. cash, bank, savings"/>
 
-                    <HBox spacing="8">
-                        <Button text="Add"    onAction="#handleAddType"/>
-                        <Button text="Update" onAction="#handleUpdateType"/>
-                        <Button text="Delete" onAction="#handleDeleteType"/>
+                    <!-- Add button: shown by default -->
+                    <Button fx:id="typeAddBtn" text="Add Type" onAction="#handleAddType" maxWidth="Infinity"/>
+
+                    <!-- Update/Delete/Cancel: hidden by default -->
+                    <HBox fx:id="typeEditButtons" spacing="8" managed="false" visible="false">
+                        <Button text="Update" onAction="#handleUpdateType" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Delete" onAction="#handleDeleteType" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Cancel" onAction="#handleCancelType" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                     </HBox>
                 </VBox>
 

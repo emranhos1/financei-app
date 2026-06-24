@@ -69,19 +69,17 @@ public class TransactionController {
         loadCategories();
     }
 
-    // ============================================================
-    // DROPDOWN SETUP
-    // ============================================================
-
     private void setupAccountComboBox() {
-        accountComboBox.setConverter(new StringConverter<>() {
-            public String toString(Account a) { return a == null ? "" : a.getName() + " [" + a.getType() + "]"; }
+        accountComboBox.setConverter(new StringConverter<Account>() {
+            public String toString(Account a) {
+                return a == null ? "" : a.getName() + " [" + a.getAccountType().getName() + "]";
+            }
             public Account fromString(String s) { return null; }
         });
     }
 
     private void setupCategoryComboBox() {
-        categoryComboBox.setConverter(new StringConverter<>() {
+        categoryComboBox.setConverter(new StringConverter<Category>() {
             public String toString(Category c) { return c == null ? "" : c.getName(); }
             public Category fromString(String s) { return null; }
         });
@@ -103,10 +101,6 @@ public class TransactionController {
         categoryComboBox.setValue(null);
     }
 
-    // ============================================================
-    // TRANSACTION TABLE
-    // ============================================================
-
     private void setupTransactionTable() {
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
@@ -120,8 +114,10 @@ public class TransactionController {
             Long accId = tx.getType() == Transaction.TransactionType.income
                     ? tx.getToAccountId() : tx.getFromAccountId();
             if (accId == null) return new SimpleStringProperty("-");
-            try { return new SimpleStringProperty(accountService.getAccountById(accId).getName()); }
-            catch (Exception e) { return new SimpleStringProperty("-"); }
+            try {
+                Account acc = accountService.getAccountById(accId);
+                return new SimpleStringProperty(acc.getName() + " [" + acc.getAccountType().getName() + "]");
+            } catch (Exception e) { return new SimpleStringProperty("-"); }
         });
 
         categoryColumn.setCellValueFactory(cd -> {
@@ -222,10 +218,6 @@ public class TransactionController {
         transactionsTable.getSelectionModel().clearSelection();
     }
 
-    // ============================================================
-    // CATEGORIES TAB
-    // ============================================================
-
     private void setupCategoryTable() {
         catIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         catNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -251,8 +243,7 @@ public class TransactionController {
         if (name.isEmpty() || type == null) { showAlert("Validation Error", "Name and type are required"); return; }
         try {
             categoryService.createCategory(sessionContext.getCurrentUserId(), name, Category.CategoryType.valueOf(type));
-            clearCategoryForm();
-            loadCategories();
+            clearCategoryForm(); loadCategories();
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 
@@ -265,8 +256,7 @@ public class TransactionController {
         if (name.isEmpty() || type == null) { showAlert("Validation Error", "Name and type are required"); return; }
         try {
             categoryService.updateCategory(sel.getId(), sessionContext.getCurrentUserId(), name, Category.CategoryType.valueOf(type));
-            clearCategoryForm();
-            loadCategories();
+            clearCategoryForm(); loadCategories();
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 
@@ -275,10 +265,7 @@ public class TransactionController {
         Category sel = categoriesTable.getSelectionModel().getSelectedItem();
         if (sel == null) { showAlert("Error", "Select a category to delete"); return; }
         if (confirm("Delete category '" + sel.getName() + "'?")) {
-            try {
-                categoryService.deleteCategory(sel.getId());
-                clearCategoryForm();
-                loadCategories();
+            try { categoryService.deleteCategory(sel.getId()); clearCategoryForm(); loadCategories();
             } catch (Exception e) { showAlert("Error", e.getMessage()); }
         }
     }
@@ -287,10 +274,6 @@ public class TransactionController {
         catNameField.clear(); catTypeComboBox.setValue(null);
         categoriesTable.getSelectionModel().clearSelection();
     }
-
-    // ============================================================
-    // HELPERS
-    // ============================================================
 
     private boolean confirm(String msg) {
         Alert a = new Alert(Alert.AlertType.CONFIRMATION);

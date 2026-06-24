@@ -30,8 +30,7 @@ public class DatabaseInitializationService {
     public void initializeDatabase() {
         try {
             log.info("Starting database initialization...");
-            
-            // Execute schema.sql
+
             try (Connection connection = dataSource.getConnection()) {
                 ScriptUtils.executeSqlScript(connection, new ClassPathResource("schema.sql"));
                 log.info("Database schema initialized successfully");
@@ -40,7 +39,6 @@ public class DatabaseInitializationService {
                 throw new RuntimeException("Database connection failed. Ensure MySQL is running and configured in application.properties", e);
             }
 
-            // Create default admin user if not exists
             if (!userService.userExists(adminUsername)) {
                 userService.createUser(
                         adminUsername,

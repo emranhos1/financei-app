@@ -27,8 +27,9 @@ public class Account {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 100)
-    private String type;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "account_type_id", nullable = false)
+    private AccountType accountType;
 
     @Column(nullable = false)
     private BigDecimal balance;
@@ -49,9 +50,7 @@ public class Account {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (balance == null) {
-            balance = BigDecimal.ZERO;
-        }
+        if (balance == null) balance = BigDecimal.ZERO;
     }
 
     @PreUpdate

@@ -30,12 +30,10 @@ public class FinanceApplication extends Application {
                 System.err.println("ERROR: Spring Boot initialization timeout");
                 System.exit(1);
             }
-
             if (applicationContext == null) {
                 System.err.println("ERROR: Spring application context is null");
                 System.exit(1);
             }
-
             showLoginScreen();
         } catch (Exception e) {
             System.err.println("ERROR: Failed to start application");
@@ -48,8 +46,10 @@ public class FinanceApplication extends Application {
         FXMLLoader loader = new FXMLLoader(FinanceApplication.class.getResource("/fxml/Login.fxml"));
         loader.setControllerFactory(applicationContext::getBean);
         Parent root = loader.load();
+        Scene scene = new Scene(root, 500, 400);
+        applyCSS(scene);
         primaryStage.setTitle("Daily Finance Management System");
-        primaryStage.setScene(new Scene(root, 500, 400));
+        primaryStage.setScene(scene);
         primaryStage.setResizable(false);
         primaryStage.centerOnScreen();
         primaryStage.show();
@@ -59,9 +59,18 @@ public class FinanceApplication extends Application {
         FXMLLoader loader = new FXMLLoader(FinanceApplication.class.getResource("/fxml/Dashboard.fxml"));
         loader.setControllerFactory(applicationContext::getBean);
         Parent root = loader.load();
-        primaryStage.setScene(new Scene(root, 1024, 768));
+        Scene scene = new Scene(root, 1024, 768);
+        applyCSS(scene);
+        primaryStage.setScene(scene);
         primaryStage.setResizable(true);
         primaryStage.centerOnScreen();
+    }
+
+    private static void applyCSS(Scene scene) {
+        String css = FinanceApplication.class.getResource("/css/main.css") != null
+                ? FinanceApplication.class.getResource("/css/main.css").toExternalForm()
+                : null;
+        if (css != null) scene.getStylesheets().add(css);
     }
 
     public static void main(String[] args) {
@@ -77,7 +86,6 @@ public class FinanceApplication extends Application {
         });
         springThread.setDaemon(true);
         springThread.start();
-
         launch(args);
     }
 }

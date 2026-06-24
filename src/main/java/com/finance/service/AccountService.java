@@ -1,7 +1,9 @@
 package com.finance.service;
 
 import com.finance.entity.Account;
+import com.finance.entity.AccountType;
 import com.finance.repository.AccountRepository;
+import com.finance.repository.AccountTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,15 +16,17 @@ import java.util.List;
 @Transactional
 public class AccountService {
     private final AccountRepository accountRepository;
+    private final AccountTypeRepository accountTypeRepository;
 
-    public Account createAccount(Long userId, String name, String type, BigDecimal initialBalance) {
-        Account account = Account.builder()
+    public Account createAccount(Long userId, String name, Long accountTypeId, BigDecimal initialBalance) {
+        AccountType accountType = accountTypeRepository.findById(accountTypeId)
+                .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
+        return accountRepository.save(Account.builder()
                 .userId(userId)
                 .name(name)
-                .type(type)
+                .accountType(accountType)
                 .balance(initialBalance != null ? initialBalance : BigDecimal.ZERO)
-                .build();
-        return accountRepository.save(account);
+                .build());
     }
 
     public Account getAccountById(Long accountId) {
@@ -34,14 +38,13 @@ public class AccountService {
         return accountRepository.findByUserId(userId);
     }
 
-    public List<Account> getAccountsByUserAndType(Long userId, String type) {
-        return accountRepository.findByUserIdAndType(userId, type);
-    }
-
-    public Account updateAccount(Long accountId, String name, String type) {
+    public Account updateAccount(Long accountId, String name, Long accountTypeId, BigDecimal balance) {
         Account account = getAccountById(accountId);
+        AccountType accountType = accountTypeRepository.findById(accountTypeId)
+                .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
         account.setName(name);
-        account.setType(type);
+        account.setAccountType(accountType);
+        account.setBalance(balance);
         return accountRepository.save(account);
     }
 
@@ -49,8 +52,8 @@ public class AccountService {
         return accountRepository.sumBalanceByUserId(userId);
     }
 
-    public BigDecimal getBalanceByType(Long userId, String type) {
-        return accountRepository.sumBalanceByUserIdAndType(userId, type);
+    public BigDecimal getBalanceByAccountType(Long userId, AccountType accountType) {
+        return accountRepository.sumBalanceByUserIdAndAccountType(userId, accountType);
     }
 
     public void updateAccountBalance(Long accountId, BigDecimal newBalance) {

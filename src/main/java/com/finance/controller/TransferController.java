@@ -5,10 +5,12 @@ import com.finance.entity.Account;
 import com.finance.entity.Transaction;
 import com.finance.service.AccountService;
 import com.finance.service.TransactionService;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 
@@ -23,132 +25,94 @@ public class TransferController {
     private final TransactionService transactionService;
     private final AccountService accountService;
 
-    @FXML
-    private ComboBox<Account> fromAccountComboBox;
+    @FXML private ComboBox<Account> fromAccountComboBox;
+    @FXML private ComboBox<Account> toAccountComboBox;
+    @FXML private DatePicker datePicker;
+    @FXML private TextField amountField;
+    @FXML private TextArea noteArea;
 
-    @FXML
-    private ComboBox<Account> toAccountComboBox;
-
-    @FXML
-    private DatePicker datePicker;
-
-    @FXML
-    private TextField amountField;
-
-    @FXML
-    private TextArea noteArea;
-
-    @FXML
-    private TableView<Transaction> transfersTable;
-
-    @FXML
-    private TableColumn<Transaction, Long> idColumn;
-
-    @FXML
-    private TableColumn<Transaction, LocalDate> dateColumn;
-
-    @FXML
-    private TableColumn<Transaction, BigDecimal> amountColumn;
-
-    @FXML
-    private TableColumn<Transaction, String> fromColumn;
-
-    @FXML
-    private TableColumn<Transaction, String> toColumn;
-
-    @FXML
-    private TableColumn<Transaction, String> noteColumn;
+    @FXML private TableView<Transaction> transfersTable;
+    @FXML private TableColumn<Transaction, Long> idColumn;
+    @FXML private TableColumn<Transaction, LocalDate> dateColumn;
+    @FXML private TableColumn<Transaction, BigDecimal> amountColumn;
+    @FXML private TableColumn<Transaction, String> fromColumn;
+    @FXML private TableColumn<Transaction, String> toColumn;
+    @FXML private TableColumn<Transaction, String> noteColumn;
 
     @FXML
     public void initialize() {
+        setupAccountComboBoxes();
         setupTable();
         loadAccounts();
         loadTransfers();
         datePicker.setValue(LocalDate.now());
     }
 
-    private void loadAccounts() {
-        Long userId = sessionContext.getCurrentUserId();
-        List<Account> accounts = accountService.getAccountsByUserId(userId);
-        fromAccountComboBox.setItems(FXCollections.observableArrayList(accounts));
-        toAccountComboBox.setItems(FXCollections.observableArrayList(accounts));
+    private void setupAccountComboBoxes() {
+        StringConverter<Account> converter = new StringConverter<Account>() {
+            public String toString(Account a) {
+                return a == null ? "" : a.getName() + " [" + a.getAccountType().getName() + "]";
+            }
+            public Account fromString(String s) { return null; }
+        };
+        fromAccountComboBox.setConverter(converter);
+        toAccountComboBox.setConverter(converter);
     }
 
     private void setupTable() {
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
         amountColumn.setCellValueFactory(new PropertyValueFactory<>("amount"));
-        
-        fromColumn.setCellValueFactory(cellData -> {
-            Transaction trans = cellData.getValue();
-            if (trans.getFromAccountId() != null) {
-                try {
-                    Account account = accountService.getAccountById(trans.getFromAccountId());
-                    return new javafx.beans.property.SimpleStringProperty(account.getName());
-                } catch (Exception e) {
-                    return new javafx.beans.property.SimpleStringProperty("N/A");
-                }
-            }
-            return new javafx.beans.property.SimpleStringProperty("N/A");
-        });
-        
-        toColumn.setCellValueFactory(cellData -> {
-            Transaction trans = cellData.getValue();
-            if (trans.getToAccountId() != null) {
-                try {
-                    Account account = accountService.getAccountById(trans.getToAccountId());
-                    return new javafx.beans.property.SimpleStringProperty(account.getName());
-                } catch (Exception e) {
-                    return new javafx.beans.property.SimpleStringProperty("N/A");
-                }
-            }
-            return new javafx.beans.property.SimpleStringProperty("N/A");
-        });
-        
         noteColumn.setCellValueFactory(new PropertyValueFactory<>("note"));
+
+        fromColumn.setCellValueFactory(cd -> {
+            Long accId = cd.getValue().getFromAccountId();
+            if (accId == null) return new SimpleStringProperty("-");
+            try { return new SimpleStringProperty(accountService.getAccountById(accId).getName()); }
+            catch (Exception e) { return new SimpleStringProperty("-"); }
+        });
+
+        toColumn.setCellValueFactory(cd -> {
+            Long accId = cd.getValue().getToAccountId();
+            if (accId == null) return new SimpleStringProperty("-");
+            try { return new SimpleStringProperty(accountService.getAccountById(accId).getName()); }
+            catch (Exception e) { return new SimpleStringProperty("-"); }
+        });
+    }
+
+    private void loadAccounts() {
+        List<Account> accounts = accountService.getAccountsByUserId(sessionContext.getCurrentUserId());
+        fromAccountComboBox.setItems(FXCollections.observableArrayList(accounts));
+        toAccountComboBox.setItems(FXCollections.observableArrayList(accounts));
     }
 
     private void loadTransfers() {
-        Long userId = sessionContext.getCurrentUserId();
-        List<Transaction> transfers = transactionService.getTransactionsByType(userId, Transaction.TransactionType.transfer);
+        List<Transaction> transfers = transactionService.getTransactionsByType(
+                sessionContext.getCurrentUserId(), Transaction.TransactionType.transfer);
         transfersTable.setItems(FXCollections.observableArrayList(transfers));
     }
 
     @FXML
     public void handleTransfer() {
-        Account fromAccount = fromAccountComboBox.getValue();
-        Account toAccount = toAccountComboBox.getValue();
+        Account from = fromAccountComboBox.getValue();
+        Account to = toAccountComboBox.getValue();
         LocalDate date = datePicker.getValue();
         String amountStr = amountField.getText().trim();
         String note = noteArea.getText().trim();
 
-        if (fromAccount == null || toAccount == null || amountStr.isEmpty()) {
-            showAlert("Validation Error", "All fields are required");
-            return;
+        if (from == null || to == null || amountStr.isEmpty()) {
+            showAlert("Validation Error", "All fields are required"); return;
         }
-
-        if (fromAccount.getId().equals(toAccount.getId())) {
-            showAlert("Validation Error", "Source and destination accounts must be different");
-            return;
+        if (from.getId().equals(to.getId())) {
+            showAlert("Validation Error", "Source and destination accounts must be different"); return;
         }
-
         try {
             BigDecimal amount = new BigDecimal(amountStr);
-            Long userId = sessionContext.getCurrentUserId();
-
             transactionService.recordTransferTransaction(
-                    userId,
-                    date,
-                    amount,
-                    fromAccount.getId(),
-                    toAccount.getId(),
-                    note
-            );
-
+                    sessionContext.getCurrentUserId(), date, amount, from.getId(), to.getId(), note);
             clearFields();
             loadAccounts();
             loadTransfers();
-            showAlert("Success", "Transfer completed successfully");
         } catch (NumberFormatException e) {
             showAlert("Validation Error", "Amount must be a valid number");
         } catch (Exception e) {
@@ -166,9 +130,7 @@ public class TransferController {
 
     private void showAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
+        alert.setTitle(title); alert.setHeaderText(null); alert.setContentText(message);
         alert.showAndWait();
     }
 }
