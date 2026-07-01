@@ -5,25 +5,35 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.text.Font?>
 
 <VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.finance.controller.LoginController"
-      alignment="CENTER" spacing="15" style="-fx-padding: 40;">
+      alignment="CENTER" spacing="8" style="-fx-padding: 15 25 15 25;">
 
-    <Label text="Daily Finance Management System" style="-fx-font-size: 24; -fx-font-weight: bold;" styleClass="app-title"/>
-    <Label text="Login" style="-fx-font-size: 18;" styleClass="app-subtitle"/>
+    <ImageView fitWidth="48" fitHeight="48" preserveRatio="true">
+        <Image url="@/images/logo.png" />
+    </ImageView>
 
-    <Label text="Username"/>
-    <TextField fx:id="usernameField" promptText="Enter your username"/>
+    <Label text="Daily Finance Management System" style="-fx-font-size: 17; -fx-font-weight: bold;" styleClass="app-title" textAlignment="CENTER" wrapText="true"/>
+    <Label text="Login" style="-fx-font-size: 13;" styleClass="app-subtitle"/>
 
-    <Label text="Password"/>
-    <PasswordField fx:id="passwordField" promptText="Enter your password"/>
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label text="Username" prefWidth="72"/>
+        <TextField fx:id="usernameField" promptText="Enter your username" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label text="Password" prefWidth="72"/>
+        <PasswordField fx:id="passwordField" promptText="Enter your password" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+    </HBox>
 
     <HBox spacing="10" alignment="CENTER">
-        <Button text="Login" style="-fx-padding: 10; -fx-font-size: 14;" styleClass="btn-primary" onAction="#handleLogin"/>
-        <Button text="Register" style="-fx-padding: 10; -fx-font-size: 14;" styleClass="btn-secondary" onAction="#handleRegister"/>
+        <Button text="Login" style="-fx-padding: 8; -fx-font-size: 13;" styleClass="btn-primary" onAction="#handleLogin"/>
+        <Button text="Register" style="-fx-padding: 8; -fx-font-size: 13;" styleClass="btn-secondary" onAction="#handleRegister"/>
     </HBox>
 </VBox>

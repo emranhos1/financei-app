@@ -40,6 +40,9 @@ public class DashboardController {
     private Button reportsBtn;
 
     @FXML
+    private Button calculatorBtn;
+
+    @FXML
     private Button adminBtn;
 
     @FXML
@@ -52,6 +55,7 @@ public class DashboardController {
         transactionBtn.setOnAction(e -> loadView("/fxml/Transaction.fxml"));
         transferBtn.setOnAction(e -> loadView("/fxml/Transfer.fxml"));
         reportsBtn.setOnAction(e -> loadView("/fxml/Reports.fxml"));
+        calculatorBtn.setOnAction(e -> loadView("/fxml/Calculator.fxml"));
         logoutBtn.setOnAction(e -> handleLogout());
 
         if (!sessionContext.isAdmin()) {

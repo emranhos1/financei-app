@@ -174,3 +174,14 @@
     -fx-text-fill: #ffffff;
     -fx-letter-spacing: 1px;
 }
+
+/* ===== CALCULATOR ===== */
+.calc-error-label {
+    -fx-text-fill: #c0392b;
+    -fx-font-size: 12px;
+}
+
+.calc-total-box {
+    -fx-padding: 8 0 0 0;
+    -fx-border-color: transparent transparent transparent transparent;
+}

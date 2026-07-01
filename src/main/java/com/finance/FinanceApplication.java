@@ -3,10 +3,12 @@ package com.finance;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import lombok.Getter;
@@ -90,7 +92,12 @@ public class FinanceApplication extends Application {
         FXMLLoader loader = new FXMLLoader(FinanceApplication.class.getResource("/fxml/Login.fxml"));
         loader.setControllerFactory(applicationContext::getBean);
         Parent root = loader.load();
-        Scene scene = new Scene(root, 500, 400);
+
+        Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
+        double width = screenBounds.getWidth() * 0.24;
+        double height = screenBounds.getHeight() * 0.32;
+
+        Scene scene = new Scene(root, width, height);
         applyCSS(scene);
         primaryStage.setTitle("Daily Finance Management System");
         primaryStage.setScene(scene);
@@ -103,10 +110,17 @@ public class FinanceApplication extends Application {
         FXMLLoader loader = new FXMLLoader(FinanceApplication.class.getResource("/fxml/Dashboard.fxml"));
         loader.setControllerFactory(applicationContext::getBean);
         Parent root = loader.load();
-        Scene scene = new Scene(root, 1024, 768);
+
+        Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
+        double width = screenBounds.getWidth() * 0.75;
+        double height = screenBounds.getHeight() * 0.82;
+
+        Scene scene = new Scene(root, width, height);
         applyCSS(scene);
         primaryStage.setScene(scene);
         primaryStage.setResizable(true);
+        primaryStage.setMinWidth(screenBounds.getWidth() * 0.45);
+        primaryStage.setMinHeight(screenBounds.getHeight() * 0.45);
         primaryStage.centerOnScreen();
     }
 
