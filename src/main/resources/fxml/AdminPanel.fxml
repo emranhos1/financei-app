@@ -12,8 +12,8 @@
     <Label text="Admin Panel - User Management" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
 
     <HBox spacing="10">
-        <Button text="Activate User" onAction="#handleActivateUser" style="-fx-padding: 8;"/>
-        <Button text="Deactivate User" onAction="#handleDeactivateUser" style="-fx-padding: 8;"/>
+        <Button text="Activate User" onAction="#handleActivateUser" style="-fx-padding: 8;" styleClass="btn-primary"/>
+        <Button text="Deactivate User" onAction="#handleDeactivateUser" style="-fx-padding: 8;" styleClass="btn-accent"/>
     </HBox>
 
     <TableView fx:id="usersTable" VBox.vgrow="ALWAYS">

@@ -29,12 +29,12 @@
             <TextArea fx:id="noteArea" prefHeight="80" wrapText="true"/>
 
             <Button fx:id="saveTransferBtn" text="Save Transfer"
-                    onAction="#handleSaveTransfer" maxWidth="Infinity"/>
+                    onAction="#handleSaveTransfer" maxWidth="Infinity" styleClass="btn-primary"/>
 
             <HBox fx:id="txEditButtons" spacing="8" visible="false" managed="false">
-                <Button text="Update" onAction="#handleUpdateTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                <Button text="Delete" onAction="#handleDeleteTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                <Button text="Cancel" onAction="#handleCancelTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                <Button text="Update" onAction="#handleUpdateTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-primary"/>
+                <Button text="Delete" onAction="#handleDeleteTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                <Button text="Cancel" onAction="#handleCancelTransfer" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
             </HBox>
 
         </VBox>

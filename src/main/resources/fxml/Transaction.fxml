@@ -40,12 +40,12 @@
                     <TextArea fx:id="noteArea" prefHeight="60" wrapText="true"/>
 
                     <Button fx:id="saveTransactionBtn" text="Save Transaction"
-                            onAction="#handleSaveTransaction" maxWidth="Infinity"/>
+                            onAction="#handleSaveTransaction" maxWidth="Infinity" styleClass="btn-primary"/>
 
                     <HBox fx:id="txEditButtons" spacing="8" visible="false" managed="false">
-                        <Button text="Update" onAction="#handleUpdateTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Delete" onAction="#handleDeleteTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Cancel" onAction="#handleCancelTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Update" onAction="#handleUpdateTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-primary"/>
+                        <Button text="Delete" onAction="#handleDeleteTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                        <Button text="Cancel" onAction="#handleCancelTransaction" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
                     </HBox>
 
                 </VBox>
@@ -75,12 +75,12 @@
                     <Label text="Type"/>
                     <ComboBox fx:id="catTypeComboBox" maxWidth="Infinity"/>
 
-                    <Button fx:id="catAddBtn" text="Add Category" onAction="#handleAddCategory" maxWidth="Infinity"/>
+                    <Button fx:id="catAddBtn" text="Add Category" onAction="#handleAddCategory" maxWidth="Infinity" styleClass="btn-primary"/>
 
                     <HBox fx:id="catEditButtons" spacing="8" managed="false" visible="false">
-                        <Button text="Update" onAction="#handleUpdateCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Delete" onAction="#handleDeleteCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Cancel" onAction="#handleCancelCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Update" onAction="#handleUpdateCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-primary"/>
+                        <Button text="Delete" onAction="#handleDeleteCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                        <Button text="Cancel" onAction="#handleCancelCategory" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
                     </HBox>
                 </VBox>
 

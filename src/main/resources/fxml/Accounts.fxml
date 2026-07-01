@@ -26,13 +26,13 @@
                     <TextField fx:id="balanceField" promptText="0.00"/>
 
                     <!-- Add button: shown by default -->
-                    <Button fx:id="accAddBtn" text="Add Account" onAction="#handleAddAccount" maxWidth="Infinity"/>
+                    <Button fx:id="accAddBtn" text="Add Account" onAction="#handleAddAccount" maxWidth="Infinity" styleClass="btn-primary"/>
 
                     <!-- Update/Delete/Cancel: hidden by default -->
                     <HBox fx:id="accEditButtons" spacing="8" managed="false" visible="false">
-                        <Button text="Update" onAction="#handleUpdateAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Delete" onAction="#handleDeleteAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Cancel" onAction="#handleCancelAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Update" onAction="#handleUpdateAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-primary"/>
+                        <Button text="Delete" onAction="#handleDeleteAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                        <Button text="Cancel" onAction="#handleCancelAccount" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
                     </HBox>
                 </VBox>
 
@@ -57,13 +57,13 @@
                     <TextField fx:id="typeNameField" promptText="e.g. cash, bank, savings"/>
 
                     <!-- Add button: shown by default -->
-                    <Button fx:id="typeAddBtn" text="Add Type" onAction="#handleAddType" maxWidth="Infinity"/>
+                    <Button fx:id="typeAddBtn" text="Add Type" onAction="#handleAddType" maxWidth="Infinity" styleClass="btn-primary"/>
 
                     <!-- Update/Delete/Cancel: hidden by default -->
                     <HBox fx:id="typeEditButtons" spacing="8" managed="false" visible="false">
-                        <Button text="Update" onAction="#handleUpdateType" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Delete" onAction="#handleDeleteType" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        <Button text="Cancel" onAction="#handleCancelType" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <Button text="Update" onAction="#handleUpdateType" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-primary"/>
+                        <Button text="Delete" onAction="#handleDeleteType" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                        <Button text="Cancel" onAction="#handleCancelType" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
                     </HBox>
                 </VBox>
 

@@ -1,6 +1,6 @@
 /* ===== SIDEBAR ===== */
 .sidebar {
-    -fx-background-color: #2b2b2b;
+    -fx-background-color: #1B5446;
     -fx-padding: 10;
     -fx-spacing: 6;
 }
@@ -9,14 +9,14 @@
     -fx-pref-width: 135;
     -fx-padding: 10 8;
     -fx-background-color: transparent;
-    -fx-text-fill: #dddddd;
+    -fx-text-fill: #d9ece6;
     -fx-font-size: 13;
     -fx-cursor: hand;
     -fx-alignment: CENTER-LEFT;
 }
 
 .sidebar-btn:hover {
-    -fx-background-color: #3c3f41;
+    -fx-background-color: #216E59;
     -fx-text-fill: #ffffff;
 }
 
@@ -29,6 +29,7 @@
 .page-title {
     -fx-font-size: 18;
     -fx-font-weight: bold;
+    -fx-text-fill: #1B5446;
 }
 
 .form-pane {
@@ -43,7 +44,7 @@
 
 /* ===== DASHBOARD BALANCE CARDS ===== */
 .balance-card {
-    -fx-border-color: #cccccc;
+    -fx-border-color: #B7D9CE;
     -fx-border-radius: 5;
     -fx-background-color: #ffffff;
     -fx-background-radius: 5;
@@ -51,18 +52,19 @@
 }
 
 .balance-card-title {
-    -fx-text-fill: #666666;
+    -fx-text-fill: #4F6F66;
     -fx-font-size: 12;
 }
 
 .balance-card-amount {
     -fx-font-size: 18;
     -fx-font-weight: bold;
+    -fx-text-fill: #D4AF37;
 }
 
 /* ===== DASHBOARD SUMMARY CARDS ===== */
 .summary-card {
-    -fx-border-color: #cccccc;
+    -fx-border-color: #B7D9CE;
     -fx-border-radius: 5;
     -fx-background-color: #ffffff;
     -fx-background-radius: 5;
@@ -72,6 +74,7 @@
 .card-title {
     -fx-font-size: 13;
     -fx-font-weight: bold;
+    -fx-text-fill: #1B5446;
 }
 
 .card-label {
@@ -80,4 +83,51 @@
 
 .net-label {
     -fx-font-weight: bold;
+    -fx-text-fill: #216E59;
+}
+
+/* ===== BRAND BUTTONS ===== */
+.btn-primary {
+    -fx-background-color: #216E59;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #1B5446;
+}
+
+.btn-secondary {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #216E59;
+    -fx-border-color: #216E59;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #eef6f3;
+}
+
+.btn-accent {
+    -fx-background-color: #D4AF37;
+    -fx-text-fill: #1B5446;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+
+.btn-accent:hover {
+    -fx-background-color: #c29c28;
+}
+
+/* ===== BRAND TEXT ===== */
+.app-title {
+    -fx-text-fill: #1B5446;
+}
+
+.app-subtitle {
+    -fx-text-fill: #216E59;
 }

@@ -14,10 +14,10 @@
         <DatePicker fx:id="startDatePicker" prefWidth="140"/>
         <Label text="End:"/>
         <DatePicker fx:id="endDatePicker" prefWidth="140"/>
-        <Button text="Generate" onAction="#handleGenerateReport"/>
+        <Button text="Generate" onAction="#handleGenerateReport" styleClass="btn-primary"/>
     </HBox>
 
-    <VBox style="-fx-border-color: #cccccc; -fx-padding: 10; -fx-background-color: #ffffff;">
+    <VBox style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;">
         <GridPane hgap="30" vgap="8">
             <Label text="Total Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
             <Label fx:id="totalIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
@@ -69,7 +69,7 @@
         <ComboBox fx:id="accountLogComboBox" prefWidth="200" promptText="View account log"/>
         <Label text="Export:"/>
         <ComboBox fx:id="accountLogFilterComboBox" prefWidth="180" promptText="All Accounts"/>
-        <Button text="Export CSV" onAction="#handleExportCSV"/>
+        <Button text="Export CSV" onAction="#handleExportCSV" styleClass="btn-secondary"/>
     </HBox>
 
     <TableView fx:id="accountLogTable" VBox.vgrow="ALWAYS">

@@ -13,8 +13,8 @@
       fx:controller="com.finance.controller.LoginController"
       alignment="CENTER" spacing="15" style="-fx-padding: 40;">
 
-    <Label text="Daily Finance Management System" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
-    <Label text="Login" style="-fx-font-size: 18;"/>
+    <Label text="Daily Finance Management System" style="-fx-font-size: 24; -fx-font-weight: bold;" styleClass="app-title"/>
+    <Label text="Login" style="-fx-font-size: 18;" styleClass="app-subtitle"/>
 
     <Label text="Username"/>
     <TextField fx:id="usernameField" promptText="Enter your username"/>
@@ -23,7 +23,7 @@
     <PasswordField fx:id="passwordField" promptText="Enter your password"/>
 
     <HBox spacing="10" alignment="CENTER">
-        <Button text="Login" style="-fx-padding: 10; -fx-font-size: 14;" onAction="#handleLogin"/>
-        <Button text="Register" style="-fx-padding: 10; -fx-font-size: 14;" onAction="#handleRegister"/>
+        <Button text="Login" style="-fx-padding: 10; -fx-font-size: 14;" styleClass="btn-primary" onAction="#handleLogin"/>
+        <Button text="Register" style="-fx-padding: 10; -fx-font-size: 14;" styleClass="btn-secondary" onAction="#handleRegister"/>
     </HBox>
 </VBox>

@@ -1,3 +1,6 @@
+CREATE DATABASE IF NOT EXISTS finance_db_v2;
+USE finance_db_v2;
+
 CREATE TABLE IF NOT EXISTS users (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      username VARCHAR(50) UNIQUE NOT NULL,
