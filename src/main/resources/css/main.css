@@ -161,3 +161,16 @@
 .splash-progress {
     -fx-progress-color: #D4AF37;
 }
+
+/* ===== SIDEBAR LOGO ===== */
+.sidebar-logo-box {
+    -fx-padding: 20 0 15 0;
+    -fx-spacing: 6;
+}
+
+.sidebar-logo-text {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+    -fx-letter-spacing: 1px;
+}

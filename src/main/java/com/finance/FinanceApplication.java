@@ -5,6 +5,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -28,7 +29,9 @@ public class FinanceApplication extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         primaryStage = stage;
+        applyAppIcon(primaryStage);
         Stage splashStage = new Stage(StageStyle.TRANSPARENT);
+        applyAppIcon(splashStage);
         showSplashScreen(splashStage);
 
         Thread springWaitThread = new Thread(() -> {
@@ -63,6 +66,12 @@ public class FinanceApplication extends Application {
         });
         springWaitThread.setDaemon(true);
         springWaitThread.start();
+    }
+
+    private static void applyAppIcon(Stage stage) {
+        if (FinanceApplication.class.getResource("/images/logo.png") != null) {
+            stage.getIcons().add(new Image(FinanceApplication.class.getResourceAsStream("/images/logo.png")));
+        }
     }
 
     private static void showSplashScreen(Stage splashStage) throws Exception {
