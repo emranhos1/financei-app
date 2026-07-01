@@ -1,10 +1,13 @@
 package com.finance;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import lombok.Getter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -25,21 +28,53 @@ public class FinanceApplication extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         primaryStage = stage;
-        try {
-            if (!springInitialized.await(30, TimeUnit.SECONDS)) {
-                System.err.println("ERROR: Spring Boot initialization timeout");
+        Stage splashStage = new Stage(StageStyle.TRANSPARENT);
+        showSplashScreen(splashStage);
+
+        Thread springWaitThread = new Thread(() -> {
+            try {
+                if (!springInitialized.await(30, TimeUnit.SECONDS)) {
+                    System.err.println("ERROR: Spring Boot initialization timeout");
+                    Platform.exit();
+                    System.exit(1);
+                    return;
+                }
+                if (applicationContext == null) {
+                    System.err.println("ERROR: Spring application context is null");
+                    Platform.exit();
+                    System.exit(1);
+                    return;
+                }
+                Platform.runLater(() -> {
+                    try {
+                        splashStage.close();
+                        showLoginScreen();
+                    } catch (Exception e) {
+                        System.err.println("ERROR: Failed to start application");
+                        e.printStackTrace();
+                        System.exit(1);
+                    }
+                });
+            } catch (Exception e) {
+                System.err.println("ERROR: Failed to start application");
+                e.printStackTrace();
                 System.exit(1);
             }
-            if (applicationContext == null) {
-                System.err.println("ERROR: Spring application context is null");
-                System.exit(1);
-            }
-            showLoginScreen();
-        } catch (Exception e) {
-            System.err.println("ERROR: Failed to start application");
-            e.printStackTrace();
-            System.exit(1);
-        }
+        });
+        springWaitThread.setDaemon(true);
+        springWaitThread.start();
+    }
+
+    private static void showSplashScreen(Stage splashStage) throws Exception {
+        FXMLLoader loader = new FXMLLoader(FinanceApplication.class.getResource("/fxml/Splash.fxml"));
+        Parent root = loader.load();
+        Scene scene = new Scene(root, 500, 350);
+        scene.setFill(Color.TRANSPARENT);
+        applyCSS(scene);
+        splashStage.setScene(scene);
+        splashStage.setResizable(false);
+        splashStage.centerOnScreen();
+        splashStage.show();
     }
 
     public static void showLoginScreen() throws Exception {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+           styleClass="splash-root" prefWidth="500" prefHeight="350">
+    <VBox alignment="CENTER" spacing="14" styleClass="splash-content">
+        <ImageView fitWidth="140" fitHeight="140" preserveRatio="true">
+            <Image url="@/images/splash.png" />
+        </ImageView>
+        <Label text="Daily Finance Management System" styleClass="splash-title" />
+        <Label text="Loading, please wait..." styleClass="splash-subtitle" fx:id="statusLabel" />
+        <ProgressIndicator progress="-1" styleClass="splash-progress" />
+    </VBox>
+</StackPane>
