@@ -50,17 +50,24 @@
 
                 </VBox>
 
-                <TableView fx:id="transactionsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                    <columns>
-                        <TableColumn fx:id="dateColumn"     text="Date"     prefWidth="95"/>
-                        <TableColumn fx:id="typeColumn"     text="Type"     prefWidth="80"/>
-                        <TableColumn fx:id="accountColumn"  text="Account"  prefWidth="140"/>
-                        <TableColumn fx:id="categoryColumn" text="Category" prefWidth="120"/>
-                        <TableColumn fx:id="amountColumn"   text="Amount"   prefWidth="90"/>
-                        <TableColumn fx:id="noteColumn"     text="Note"     minWidth="150"/>
-                    </columns>
-                    <placeholder><Label text="No transactions yet"/></placeholder>
-                </TableView>
+                <VBox spacing="6" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Filter by Category:"/>
+                        <ComboBox fx:id="categoryFilterComboBox" prefWidth="220"/>
+                    </HBox>
+
+                    <TableView fx:id="transactionsTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="dateColumn"     text="Date"     prefWidth="95"/>
+                            <TableColumn fx:id="typeColumn"     text="Type"     prefWidth="80"/>
+                            <TableColumn fx:id="accountColumn"  text="Account"  prefWidth="140"/>
+                            <TableColumn fx:id="categoryColumn" text="Category" prefWidth="120"/>
+                            <TableColumn fx:id="amountColumn"   text="Amount"   prefWidth="90"/>
+                            <TableColumn fx:id="noteColumn"     text="Note"     minWidth="150"/>
+                        </columns>
+                        <placeholder><Label text="No transactions yet"/></placeholder>
+                    </TableView>
+                </VBox>
 
             </HBox>
         </Tab>

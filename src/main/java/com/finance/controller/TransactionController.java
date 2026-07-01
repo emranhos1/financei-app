@@ -9,6 +9,8 @@ import com.finance.service.CategoryService;
 import com.finance.service.TransactionService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,6 +51,11 @@ public class TransactionController {
     @FXML private TableColumn<Transaction, String> categoryColumn;
     @FXML private TableColumn<Transaction, BigDecimal> amountColumn;
     @FXML private TableColumn<Transaction, String> noteColumn;
+    @FXML private ComboBox<Category> categoryFilterComboBox;
+
+    private static final Category ALL_CATEGORIES_OPTION = Category.builder().id(null).name("All Categories").build();
+
+    private FilteredList<Transaction> filteredTransactions;
 
     @FXML private TableView<Category> categoriesTable;
     @FXML private TableColumn<Category, Long> catIdColumn;
@@ -69,6 +77,8 @@ public class TransactionController {
 
         typeToggleGroup.selectedToggleProperty().addListener((obs, o, n) -> refreshDropdowns());
         datePicker.setValue(LocalDate.now());
+
+        setupCategoryFilterComboBox();
 
         catTypeComboBox.setItems(FXCollections.observableArrayList(Category.CategoryType.values()));
         catTypeComboBox.setConverter(new StringConverter<Category.CategoryType>() {
@@ -144,9 +154,36 @@ public class TransactionController {
         });
     }
 
+    private void setupCategoryFilterComboBox() {
+        categoryFilterComboBox.setConverter(new StringConverter<Category>() {
+            public String toString(Category c) { return c == null ? "" : c.getName(); }
+            public Category fromString(String s) { return null; }
+        });
+        categoryFilterComboBox.setOnAction(e -> applyCategoryFilter(categoryFilterComboBox.getValue()));
+    }
+
     private void loadTransactions() {
-        transactionsTable.setItems(FXCollections.observableArrayList(
-                transactionService.getTransactionsByUserId(sessionContext.getCurrentUserId())));
+        ObservableList<Transaction> allTransactions = FXCollections.observableArrayList(
+                transactionService.getTransactionsByUserId(sessionContext.getCurrentUserId()));
+        filteredTransactions = new FilteredList<>(allTransactions, tx -> true);
+        transactionsTable.setItems(filteredTransactions);
+
+        List<Category> userCategories = categoryService.getCategoriesByUserId(sessionContext.getCurrentUserId());
+        List<Category> filterOptions = new ArrayList<>();
+        filterOptions.add(ALL_CATEGORIES_OPTION);
+        filterOptions.addAll(userCategories);
+        categoryFilterComboBox.setItems(FXCollections.observableArrayList(filterOptions));
+        categoryFilterComboBox.setValue(ALL_CATEGORIES_OPTION);
+        applyCategoryFilter(ALL_CATEGORIES_OPTION);
+    }
+
+    private void applyCategoryFilter(Category selected) {
+        if (filteredTransactions == null) return;
+        if (selected == null || selected.getId() == null) {
+            filteredTransactions.setPredicate(tx -> true);
+        } else {
+            filteredTransactions.setPredicate(tx -> selected.getId().equals(tx.getCategoryId()));
+        }
     }
 
     private void populateFormForEdit(Transaction tx) {
