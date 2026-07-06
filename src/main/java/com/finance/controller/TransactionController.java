@@ -52,6 +52,7 @@ public class TransactionController {
     @FXML private TableColumn<Transaction, BigDecimal> amountColumn;
     @FXML private TableColumn<Transaction, String> noteColumn;
     @FXML private ComboBox<Category> categoryFilterComboBox;
+    @FXML private DatePicker dateFilter;
 
     private static final Category ALL_CATEGORIES_OPTION = Category.builder().id(null).name("All Categories").build();
 
@@ -159,7 +160,8 @@ public class TransactionController {
             public String toString(Category c) { return c == null ? "" : c.getName(); }
             public Category fromString(String s) { return null; }
         });
-        categoryFilterComboBox.setOnAction(e -> applyCategoryFilter(categoryFilterComboBox.getValue()));
+        categoryFilterComboBox.setOnAction(e -> applyFilters());
+        dateFilter.valueProperty().addListener((obs, o, n) -> applyFilters());
     }
 
     private void loadTransactions() {
@@ -174,16 +176,31 @@ public class TransactionController {
         filterOptions.addAll(userCategories);
         categoryFilterComboBox.setItems(FXCollections.observableArrayList(filterOptions));
         categoryFilterComboBox.setValue(ALL_CATEGORIES_OPTION);
-        applyCategoryFilter(ALL_CATEGORIES_OPTION);
+        applyFilters();
     }
 
-    private void applyCategoryFilter(Category selected) {
+    private void applyFilters() {
         if (filteredTransactions == null) return;
-        if (selected == null || selected.getId() == null) {
-            filteredTransactions.setPredicate(tx -> true);
-        } else {
-            filteredTransactions.setPredicate(tx -> selected.getId().equals(tx.getCategoryId()));
-        }
+        Category selectedCategory = categoryFilterComboBox.getValue();
+        LocalDate selectedDate = dateFilter.getValue();
+
+        filteredTransactions.setPredicate(tx -> {
+            if (selectedCategory != null && selectedCategory.getId() != null
+                    && !selectedCategory.getId().equals(tx.getCategoryId())) {
+                return false;
+            }
+            if (selectedDate != null && !tx.getDate().isEqual(selectedDate)) {
+                return false;
+            }
+            return true;
+        });
+    }
+
+    @FXML
+    public void handleClearFilters() {
+        categoryFilterComboBox.setValue(ALL_CATEGORIES_OPTION);
+        dateFilter.setValue(null);
+        applyFilters();
     }
 
     private void populateFormForEdit(Transaction tx) {
@@ -218,14 +235,14 @@ public class TransactionController {
         Account account = accountComboBox.getValue();
         Category category = categoryComboBox.getValue();
         String note = noteArea.getText().trim();
-        if (type == null || date == null || amountStr.isEmpty() || account == null) {
-            showAlert("Validation Error", "Type, Date, Account and Amount are required"); return;
+        if (type == null || date == null || amountStr.isEmpty() || account == null || category == null) {
+            showAlert("Validation Error", "Type, Date, Account, Category and Amount are required"); return;
         }
         if (!confirm("Save this transaction?")) return;
         try {
             BigDecimal amount = new BigDecimal(amountStr);
             Long userId = sessionContext.getCurrentUserId();
-            Long categoryId = category != null ? category.getId() : null;
+            Long categoryId = category.getId();
             if ("INCOME".equals(type)) {
                 transactionService.recordIncomeTransaction(userId, date, amount, account.getId(), categoryId, note);
             } else {
@@ -247,13 +264,13 @@ public class TransactionController {
         Account account = accountComboBox.getValue();
         Category category = categoryComboBox.getValue();
         String note = noteArea.getText().trim();
-        if (type == null || date == null || amountStr.isEmpty() || account == null) {
-            showAlert("Validation Error", "Type, Date, Account and Amount are required"); return;
+        if (type == null || date == null || amountStr.isEmpty() || account == null || category == null) {
+            showAlert("Validation Error", "Type, Date, Account, Category and Amount are required"); return;
         }
         if (!confirm("Update this transaction?")) return;
         try {
             BigDecimal amount = new BigDecimal(amountStr);
-            Long categoryId = category != null ? category.getId() : null;
+            Long categoryId = category.getId();
             transactionService.updateTransaction(selectedTransaction.getId(), sessionContext.getCurrentUserId(), date, amount, categoryId, note);
             resetTransactionForm();
             loadTransactions();

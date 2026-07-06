@@ -70,6 +70,22 @@ public class LoginController {
         }
     }
 
+    @FXML
+    public void handleForgotPassword() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/ForgotPassword.fxml"));
+            loader.setControllerFactory(FinanceApplication.getApplicationContext()::getBean);
+            Parent root = loader.load();
+
+            Stage forgotPasswordStage = new Stage();
+            forgotPasswordStage.setTitle("Reset Password");
+            forgotPasswordStage.setScene(new Scene(root, 400, 420));
+            forgotPasswordStage.show();
+        } catch (IOException e) {
+            showAlert("Error", "Failed to open reset password window");
+        }
+    }
+
     private void showAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);

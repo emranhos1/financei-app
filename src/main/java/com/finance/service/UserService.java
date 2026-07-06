@@ -60,6 +60,13 @@ public class UserService {
         return userRepository.findByUsername(username).isPresent();
     }
 
+    public User resetPassword(String username, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("No account found with that username"));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        return userRepository.save(user);
+    }
+
     public void deleteUser(Long userId) {
         userRepository.deleteById(userId);
     }

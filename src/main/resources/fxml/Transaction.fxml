@@ -17,7 +17,7 @@
                 <VBox spacing="8" prefWidth="270">
 
                     <Label text="Date"/>
-                    <DatePicker fx:id="datePicker" prefWidth="250"/>
+                    <DatePicker fx:id="datePicker" maxWidth="Infinity"/>
 
                     <Label text="Type"/>
                     <HBox spacing="15">
@@ -28,16 +28,16 @@
                     </HBox>
 
                     <Label text="Account"/>
-                    <ComboBox fx:id="accountComboBox" prefWidth="250"/>
+                    <ComboBox fx:id="accountComboBox" maxWidth="Infinity"/>
 
                     <Label text="Category"/>
-                    <ComboBox fx:id="categoryComboBox" prefWidth="250"/>
+                    <ComboBox fx:id="categoryComboBox" maxWidth="Infinity"/>
 
                     <Label text="Amount"/>
-                    <TextField fx:id="amountField" promptText="0.00"/>
+                    <TextField fx:id="amountField" promptText="0.00" maxWidth="Infinity"/>
 
                     <Label text="Note"/>
-                    <TextArea fx:id="noteArea" prefHeight="60" wrapText="true"/>
+                    <TextArea fx:id="noteArea" prefHeight="60" wrapText="true" maxWidth="Infinity"/>
 
                     <Button fx:id="saveTransactionBtn" text="Save Transaction"
                             onAction="#handleSaveTransaction" maxWidth="Infinity" styleClass="btn-primary"/>
@@ -53,7 +53,10 @@
                 <VBox spacing="6" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Label text="Filter by Category:"/>
-                        <ComboBox fx:id="categoryFilterComboBox" prefWidth="220"/>
+                        <ComboBox fx:id="categoryFilterComboBox" prefWidth="180"/>
+                        <Label text="Date:"/>
+                        <DatePicker fx:id="dateFilter" prefWidth="140"/>
+                        <Button text="Clear" onAction="#handleClearFilters" styleClass="btn-secondary"/>
                     </HBox>
 
                     <TableView fx:id="transactionsTable" VBox.vgrow="ALWAYS">
