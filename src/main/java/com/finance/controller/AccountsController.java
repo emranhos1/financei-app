@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,8 @@ public class AccountsController {
     @FXML private TextField nameField;
     @FXML private ComboBox<AccountType> typeComboBox;
     @FXML private TextField balanceField;
+    @FXML private DatePicker maturityDatePicker;
+    @FXML private TextField installmentField;
     @FXML private Button accAddBtn;
     @FXML private HBox accEditButtons;
 
@@ -71,6 +74,8 @@ public class AccountsController {
                 nameField.setText(sel.getName());
                 typeComboBox.setValue(sel.getAccountType());
                 balanceField.setText(sel.getBalance().toPlainString());
+                maturityDatePicker.setValue(sel.getMaturityDate());
+                installmentField.setText(sel.getInstallmentAmount() != null ? sel.getInstallmentAmount().toPlainString() : "");
                 accAddBtn.setVisible(false);
                 accAddBtn.setManaged(false);
                 accEditButtons.setVisible(true);
@@ -95,9 +100,16 @@ public class AccountsController {
         AccountType type = typeComboBox.getValue();
         String balStr = balanceField.getText().trim();
         if (name.isEmpty() || type == null || balStr.isEmpty()) { showAlert("Validation Error", "All fields are required"); return; }
+        String instStr = installmentField.getText().trim();
+        if (!instStr.isEmpty()) {
+            try { new BigDecimal(instStr); } catch (NumberFormatException e) { showAlert("Validation Error", "Installment amount must be a valid number"); return; }
+        }
         if (!confirm("Add account '" + name + "'?")) return;
         try {
-            accountService.createAccount(sessionContext.getCurrentUserId(), name, type.getId(), new BigDecimal(balStr));
+            LocalDate maturityDate = maturityDatePicker.getValue();
+            BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
+            accountService.createAccount(sessionContext.getCurrentUserId(), name, type.getId(), new BigDecimal(balStr),
+                    maturityDate, installmentAmount);
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -110,10 +122,16 @@ public class AccountsController {
         AccountType type = typeComboBox.getValue();
         String balStr = balanceField.getText().trim();
         if (name.isEmpty() || type == null || balStr.isEmpty()) { showAlert("Validation Error", "Name, type and balance are required"); return; }
+        String instStr = installmentField.getText().trim();
+        if (!instStr.isEmpty()) {
+            try { new BigDecimal(instStr); } catch (NumberFormatException e) { showAlert("Validation Error", "Installment amount must be a valid number"); return; }
+        }
         if (!confirm("Update account '" + sel.getName() + "'?")) return;
         try {
             BigDecimal balance = new BigDecimal(balStr);
-            accountService.updateAccount(sel.getId(), name, type.getId(), balance);
+            LocalDate maturityDate = maturityDatePicker.getValue();
+            BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
+            accountService.updateAccount(sel.getId(), name, type.getId(), balance, maturityDate, installmentAmount);
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -131,6 +149,7 @@ public class AccountsController {
 
     private void resetAccountForm() {
         nameField.clear(); balanceField.clear(); typeComboBox.setValue(null);
+        maturityDatePicker.setValue(null); installmentField.clear();
         accountsTable.getSelectionModel().clearSelection();
         accAddBtn.setVisible(true); accAddBtn.setManaged(true);
         accEditButtons.setVisible(false); accEditButtons.setManaged(false);

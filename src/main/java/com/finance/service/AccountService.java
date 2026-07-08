@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -21,12 +22,14 @@ public class AccountService {
     private final AccountTypeRepository accountTypeRepository;
     private final AccountLogRepository accountLogRepository;
 
-    public Account createAccount(Long userId, String name, Long accountTypeId, BigDecimal initialBalance) {
+    public Account createAccount(Long userId, String name, Long accountTypeId, BigDecimal initialBalance,
+                                 LocalDate maturityDate, BigDecimal installmentAmount) {
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
         BigDecimal balance = initialBalance != null ? initialBalance : BigDecimal.ZERO;
         Account account = accountRepository.save(Account.builder()
-                .userId(userId).name(name).accountType(accountType).balance(balance).build());
+                .userId(userId).name(name).accountType(accountType).balance(balance)
+                .maturityDate(maturityDate).installmentAmount(installmentAmount).build());
         if (balance.compareTo(BigDecimal.ZERO) != 0) {
             accountLogRepository.save(AccountLog.builder()
                     .accountId(account.getId()).userId(userId)
@@ -47,7 +50,8 @@ public class AccountService {
         return accountRepository.findByUserId(userId);
     }
 
-    public Account updateAccount(Long accountId, String name, Long accountTypeId, BigDecimal newBalance) {
+    public Account updateAccount(Long accountId, String name, Long accountTypeId, BigDecimal newBalance,
+                                 LocalDate maturityDate, BigDecimal installmentAmount) {
         Account account = getAccountById(accountId);
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
@@ -55,6 +59,8 @@ public class AccountService {
         account.setName(name);
         account.setAccountType(accountType);
         account.setBalance(newBalance);
+        account.setMaturityDate(maturityDate);
+        account.setInstallmentAmount(installmentAmount);
         accountRepository.save(account);
         if (oldBalance.compareTo(newBalance) != 0) {
             BigDecimal diff = newBalance.subtract(oldBalance);

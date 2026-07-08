@@ -1,74 +1,124 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.finance.controller.DashboardHomeController"
-      styleClass="content-pane">
+<ScrollPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.finance.controller.DashboardHomeController"
+            fitToWidth="true" styleClass="dash-scroll">
+<VBox styleClass="content-pane" spacing="16">
 
     <Label text="Financial Summary" styleClass="page-title"/>
 
-    <!-- Balance cards built dynamically in controller -->
+    <!-- Row 1: account type balance cards, built dynamically in controller -->
     <HBox fx:id="balanceCardsBox" spacing="12"/>
 
-    <!-- Period cards: Today | This Month | This Year -->
-    <HBox spacing="12">
+    <!-- Row 2: Net worth (50%) | Recent transactions (50%) -->
+    <GridPane hgap="12">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="50"/>
+            <ColumnConstraints percentWidth="50"/>
+        </columnConstraints>
 
-        <VBox styleClass="summary-card" HBox.hgrow="ALWAYS" spacing="6">
-            <Label text="Today" styleClass="card-title"/>
-            <HBox spacing="10">
-                <Label text="Income:"  styleClass="card-label"/>
-                <Label fx:id="todayIncomeLabel" text="৳ 0.00"/>
-            </HBox>
-            <HBox spacing="10">
-                <Label text="Expense:" styleClass="card-label"/>
-                <Label fx:id="todayExpenseLabel" text="৳ 0.00"/>
-            </HBox>
-            <HBox spacing="10">
-                <Label text="Net:" styleClass="card-label"/>
-                <Label fx:id="todayNetLabel" text="৳ 0.00" styleClass="net-label"/>
+        <VBox styleClass="summary-card" spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="0">
+            <Label text="Net worth" styleClass="dash-section-title"/>
+            <Label text="Liquid balance — bank and cash type accounts" styleClass="dash-section-hint"/>
+            <Label fx:id="netWorthAmountLabel" text="৳ 0.00" styleClass="dash-networth-amount"/>
+            <FlowPane fx:id="netWorthChipsBox" hgap="8" vgap="8"/>
+        </VBox>
+
+        <VBox styleClass="summary-card" spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <Label text="Recent transactions" styleClass="dash-section-title"/>
+            <VBox fx:id="recentTxBox" spacing="0"/>
+        </VBox>
+    </GridPane>
+
+    <!-- Row 3: Income vs expense last 7 days (50%) | Expense ratio + top expense (50%) -->
+    <GridPane hgap="12">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="50"/>
+            <ColumnConstraints percentWidth="50"/>
+        </columnConstraints>
+
+        <VBox styleClass="summary-card" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+            <Label text="Income vs expense — last 7 days" styleClass="dash-section-title"/>
+            <Label fx:id="weeklyNetLabel" text="৳ 0.00 net" styleClass="dash-trend-amount"/>
+            <HBox fx:id="weeklyChartBox" spacing="10" alignment="BOTTOM_CENTER" prefHeight="120">
+                <padding><Insets top="10"/></padding>
             </HBox>
         </VBox>
 
-        <VBox styleClass="summary-card" HBox.hgrow="ALWAYS" spacing="6">
-            <Label text="This Month" styleClass="card-title"/>
-            <HBox spacing="10">
-                <Label text="Income:"  styleClass="card-label"/>
-                <Label fx:id="monthIncomeLabel" text="৳ 0.00"/>
+        <VBox spacing="12" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <VBox styleClass="summary-card" spacing="6" alignment="CENTER">
+                <StackPane fx:id="expenseRingStack" prefWidth="90" prefHeight="90" maxWidth="90" maxHeight="90">
+                    <Label fx:id="expenseRingLabel" text="0%" styleClass="dash-ring-label"/>
+                </StackPane>
+                <Label text="Expense of this month's income" styleClass="dash-ring-sub" wrapText="true"
+                       alignment="CENTER" textAlignment="CENTER" maxWidth="140"/>
+            </VBox>
+            <VBox styleClass="summary-card" spacing="4">
+                <Label text="Top expense" styleClass="dash-top-expense-label"/>
+                <Label fx:id="topExpenseLabel" text="—" styleClass="dash-top-expense-value" wrapText="true"/>
+            </VBox>
+        </VBox>
+    </GridPane>
+
+    <!-- Row 4: Net worth trend (60%) | Today / Month / Year table (40%) -->
+    <GridPane hgap="12">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="60"/>
+            <ColumnConstraints percentWidth="40"/>
+        </columnConstraints>
+
+        <VBox styleClass="summary-card" spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+            <HBox>
+                <Label text="Net worth trend" styleClass="dash-section-title" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                <Label fx:id="trendAmountLabel" text="৳ 0.00" styleClass="dash-trend-amount"/>
             </HBox>
-            <HBox spacing="10">
-                <Label text="Expense:" styleClass="card-label"/>
-                <Label fx:id="monthExpenseLabel" text="৳ 0.00"/>
-            </HBox>
-            <HBox spacing="10">
-                <Label text="Net:" styleClass="card-label"/>
-                <Label fx:id="monthNetLabel" text="৳ 0.00" styleClass="net-label"/>
-            </HBox>
+            <StackPane fx:id="trendChartPane" prefHeight="70" minHeight="70"/>
+            <HBox fx:id="trendMonthLabelsBox" spacing="4"/>
         </VBox>
 
-        <VBox styleClass="summary-card" HBox.hgrow="ALWAYS" spacing="6">
-            <Label text="This Year" styleClass="card-title"/>
-            <HBox spacing="10">
-                <Label text="Income:"  styleClass="card-label"/>
-                <Label fx:id="yearIncomeLabel" text="৳ 0.00"/>
-            </HBox>
-            <HBox spacing="10">
-                <Label text="Expense:" styleClass="card-label"/>
-                <Label fx:id="yearExpenseLabel" text="৳ 0.00"/>
-            </HBox>
-            <HBox spacing="10">
-                <Label text="Net:" styleClass="card-label"/>
-                <Label fx:id="yearNetLabel" text="৳ 0.00" styleClass="net-label"/>
-            </HBox>
+        <VBox styleClass="summary-card" spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <Label text="Today / Month / Year" styleClass="dash-section-title"/>
+            <GridPane hgap="16" vgap="6">
+                <Label text="" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <Label text="Income" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="dash-table-head"/>
+                <Label text="Expense" GridPane.columnIndex="2" GridPane.rowIndex="0" styleClass="dash-table-head"/>
+
+                <Label text="Today" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="card-label"/>
+                <Label fx:id="todayIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                <Label fx:id="todayExpenseLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+
+                <Label text="Month" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="card-label"/>
+                <Label fx:id="monthIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                <Label fx:id="monthExpenseLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+
+                <Label text="Year" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="card-label"/>
+                <Label fx:id="yearIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                <Label fx:id="yearExpenseLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+            </GridPane>
         </VBox>
+    </GridPane>
 
-    </HBox>
+    <!-- Row 5: Goal accounts (any account with a maturity date, e.g. DPS / FDR) -->
+    <VBox styleClass="summary-card" spacing="10">
+        <HBox>
+            <Label text="Goal accounts" styleClass="dash-section-title" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <Label text="Shows any account with a maturity date" styleClass="dash-section-hint"/>
+        </HBox>
+        <FlowPane fx:id="goalCardsBox" hgap="12" vgap="12"/>
+    </VBox>
 
-    <!-- Category breakdown -->
+    <!-- Category breakdown (existing feature, unchanged) -->
     <VBox styleClass="summary-card" spacing="10">
         <Label text="Category Breakdown" styleClass="card-title"/>
         <ComboBox fx:id="categoryComboBox" prefWidth="300" promptText="— Select Category —"/>
@@ -93,3 +143,4 @@
     </VBox>
 
 </VBox>
+</ScrollPane>

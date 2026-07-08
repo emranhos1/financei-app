@@ -25,6 +25,12 @@
                     <Label text="Initial Balance"/>
                     <TextField fx:id="balanceField" promptText="0.00"/>
 
+                    <Label text="Maturity Date (optional — for DPS/FDR)"/>
+                    <DatePicker fx:id="maturityDatePicker" maxWidth="Infinity"/>
+
+                    <Label text="Installment Amount (optional)"/>
+                    <TextField fx:id="installmentField" promptText="0.00"/>
+
                     <!-- Add button: shown by default -->
                     <Button fx:id="accAddBtn" text="Add Account" onAction="#handleAddAccount" maxWidth="Infinity" styleClass="btn-primary"/>
 
