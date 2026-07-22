@@ -35,6 +35,18 @@ CREATE TABLE IF NOT EXISTS accounts (
     INDEX idx_user_id (user_id)
     );
 
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounts' AND COLUMN_NAME = 'show_in_goals'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE accounts ADD COLUMN show_in_goals BOOLEAN NOT NULL DEFAULT FALSE',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 CREATE TABLE IF NOT EXISTS categories (
                                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                           user_id BIGINT NOT NULL,

@@ -17,12 +17,15 @@ import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
 public class AccountsController {
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
     private final SessionContext sessionContext;
     private final AccountService accountService;
     private final AccountTypeService accountTypeService;
@@ -32,11 +35,15 @@ public class AccountsController {
     @FXML private TableColumn<Account, String> nameColumn;
     @FXML private TableColumn<Account, String> typeColumn;
     @FXML private TableColumn<Account, BigDecimal> balanceColumn;
+    @FXML private TableColumn<Account, String> maturityColumn;
+    @FXML private TableColumn<Account, String> installmentColumn;
+    @FXML private TableColumn<Account, String> goalCardColumn;
     @FXML private TextField nameField;
     @FXML private ComboBox<AccountType> typeComboBox;
     @FXML private TextField balanceField;
     @FXML private DatePicker maturityDatePicker;
     @FXML private TextField installmentField;
+    @FXML private CheckBox showInGoalsCheck;
     @FXML private Button accAddBtn;
     @FXML private HBox accEditButtons;
 
@@ -63,6 +70,16 @@ public class AccountsController {
         typeColumn.setCellValueFactory(cd ->
                 new SimpleStringProperty(cd.getValue().getAccountType().getName()));
         balanceColumn.setCellValueFactory(new PropertyValueFactory<>("balance"));
+        maturityColumn.setCellValueFactory(cd -> {
+            LocalDate d = cd.getValue().getMaturityDate();
+            return new SimpleStringProperty(d == null ? "—" : d.format(DATE_FMT));
+        });
+        installmentColumn.setCellValueFactory(cd -> {
+            BigDecimal amt = cd.getValue().getInstallmentAmount();
+            return new SimpleStringProperty(amt == null ? "—" : amt.toPlainString());
+        });
+        goalCardColumn.setCellValueFactory(cd ->
+                new SimpleStringProperty(Boolean.TRUE.equals(cd.getValue().getShowInGoals()) ? "Yes" : "No"));
 
         typeComboBox.setConverter(new StringConverter<AccountType>() {
             public String toString(AccountType t) { return t == null ? "" : t.getName(); }
@@ -76,6 +93,7 @@ public class AccountsController {
                 balanceField.setText(sel.getBalance().toPlainString());
                 maturityDatePicker.setValue(sel.getMaturityDate());
                 installmentField.setText(sel.getInstallmentAmount() != null ? sel.getInstallmentAmount().toPlainString() : "");
+                showInGoalsCheck.setSelected(Boolean.TRUE.equals(sel.getShowInGoals()));
                 accAddBtn.setVisible(false);
                 accAddBtn.setManaged(false);
                 accEditButtons.setVisible(true);
@@ -109,7 +127,7 @@ public class AccountsController {
             LocalDate maturityDate = maturityDatePicker.getValue();
             BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
             accountService.createAccount(sessionContext.getCurrentUserId(), name, type.getId(), new BigDecimal(balStr),
-                    maturityDate, installmentAmount);
+                    maturityDate, installmentAmount, showInGoalsCheck.isSelected());
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -131,7 +149,8 @@ public class AccountsController {
             BigDecimal balance = new BigDecimal(balStr);
             LocalDate maturityDate = maturityDatePicker.getValue();
             BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
-            accountService.updateAccount(sel.getId(), name, type.getId(), balance, maturityDate, installmentAmount);
+            accountService.updateAccount(sel.getId(), name, type.getId(), balance, maturityDate, installmentAmount,
+                    showInGoalsCheck.isSelected());
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -149,7 +168,7 @@ public class AccountsController {
 
     private void resetAccountForm() {
         nameField.clear(); balanceField.clear(); typeComboBox.setValue(null);
-        maturityDatePicker.setValue(null); installmentField.clear();
+        maturityDatePicker.setValue(null); installmentField.clear(); showInGoalsCheck.setSelected(false);
         accountsTable.getSelectionModel().clearSelection();
         accAddBtn.setVisible(true); accAddBtn.setManaged(true);
         accEditButtons.setVisible(false); accEditButtons.setManaged(false);

@@ -45,6 +45,10 @@ public class TransactionService {
         Account fromAccount = accountRepository.findById(fromAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("From account not found"));
         if (!fromAccount.getUserId().equals(userId)) throw new IllegalArgumentException("Account does not belong to user");
+        if (fromAccount.getBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient balance in '" + fromAccount.getName() + "' (available: \u09f3 "
+                    + fromAccount.getBalance().toPlainString() + ")");
+        }
 
         BigDecimal before = fromAccount.getBalance();
         fromAccount.setBalance(before.subtract(amount));
@@ -70,6 +74,10 @@ public class TransactionService {
             throw new IllegalArgumentException("Accounts do not belong to user");
         if (fromAccount.getId().equals(toAccount.getId()))
             throw new IllegalArgumentException("Cannot transfer to the same account");
+        if (fromAccount.getBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient balance in '" + fromAccount.getName() + "' (available: \u09f3 "
+                    + fromAccount.getBalance().toPlainString() + ")");
+        }
 
         BigDecimal fromBefore = fromAccount.getBalance();
         BigDecimal toBefore = toAccount.getBalance();
@@ -108,7 +116,12 @@ public class TransactionService {
         } else if (tx.getType() == Transaction.TransactionType.EXPENSE) {
             Account acc = accountRepository.findById(tx.getFromAccountId()).orElseThrow();
             BigDecimal before = acc.getBalance();
-            acc.setBalance(before.subtract(diff));
+            BigDecimal after = before.subtract(diff);
+            if (after.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Insufficient balance in '" + acc.getName() + "' (available: \u09f3 "
+                        + before.toPlainString() + ")");
+            }
+            acc.setBalance(after);
             accountRepository.save(acc);
             accountService.logBalanceChange(acc.getId(), userId, before, acc.getBalance(),
                     AccountLog.ChangeType.ADJUSTMENT, AccountLog.ReferenceType.EXPENSE, transactionId, note);
@@ -117,7 +130,12 @@ public class TransactionService {
             Account to = accountRepository.findById(tx.getToAccountId()).orElseThrow();
             BigDecimal fromBefore = from.getBalance();
             BigDecimal toBefore = to.getBalance();
-            from.setBalance(fromBefore.subtract(diff));
+            BigDecimal fromAfter = fromBefore.subtract(diff);
+            if (fromAfter.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Insufficient balance in '" + from.getName() + "' (available: \u09f3 "
+                        + fromBefore.toPlainString() + ")");
+            }
+            from.setBalance(fromAfter);
             to.setBalance(toBefore.add(diff));
             accountRepository.save(from);
             accountRepository.save(to);

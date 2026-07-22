@@ -29,6 +29,7 @@
 
                     <Label text="Account"/>
                     <ComboBox fx:id="accountComboBox" maxWidth="Infinity"/>
+                    <Label fx:id="accountBalanceLabel" text="" style="-fx-font-size: 11; -fx-text-fill: #4F6F66;"/>
 
                     <Label text="Category"/>
                     <ComboBox fx:id="categoryComboBox" maxWidth="Infinity"/>

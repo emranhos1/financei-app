@@ -38,6 +38,7 @@ public class TransactionController {
     @FXML private ToggleGroup typeToggleGroup;
     @FXML private DatePicker datePicker;
     @FXML private ComboBox<Account> accountComboBox;
+    @FXML private Label accountBalanceLabel;
     @FXML private ComboBox<Category> categoryComboBox;
     @FXML private TextField amountField;
     @FXML private TextArea noteArea;
@@ -100,6 +101,12 @@ public class TransactionController {
             }
             public Account fromString(String s) { return null; }
         });
+        accountComboBox.valueProperty().addListener((obs, o, selected) -> updateAccountBalanceLabel(selected));
+    }
+
+    private void updateAccountBalanceLabel(Account account) {
+        if (account == null) { accountBalanceLabel.setText(""); return; }
+        accountBalanceLabel.setText("Available balance: \u09f3 " + account.getBalance().toPlainString());
     }
 
     private void setupCategoryComboBox() {

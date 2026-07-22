@@ -50,22 +50,30 @@ public class DashboardController {
 
     @FXML
     public void initialize() {
-        dashboardBtn.setOnAction(e -> loadView("/fxml/DashboardHome.fxml"));
-        accountsBtn.setOnAction(e -> loadView("/fxml/Accounts.fxml"));
-        transactionBtn.setOnAction(e -> loadView("/fxml/Transaction.fxml"));
-        transferBtn.setOnAction(e -> loadView("/fxml/Transfer.fxml"));
-        reportsBtn.setOnAction(e -> loadView("/fxml/Reports.fxml"));
-        calculatorBtn.setOnAction(e -> loadView("/fxml/Calculator.fxml"));
+        dashboardBtn.setOnAction(e -> { loadView("/fxml/DashboardHome.fxml"); setActiveButton(dashboardBtn); });
+        accountsBtn.setOnAction(e -> { loadView("/fxml/Accounts.fxml"); setActiveButton(accountsBtn); });
+        transactionBtn.setOnAction(e -> { loadView("/fxml/Transaction.fxml"); setActiveButton(transactionBtn); });
+        transferBtn.setOnAction(e -> { loadView("/fxml/Transfer.fxml"); setActiveButton(transferBtn); });
+        reportsBtn.setOnAction(e -> { loadView("/fxml/Reports.fxml"); setActiveButton(reportsBtn); });
+        calculatorBtn.setOnAction(e -> { loadView("/fxml/Calculator.fxml"); setActiveButton(calculatorBtn); });
         logoutBtn.setOnAction(e -> handleLogout());
 
         if (!sessionContext.isAdmin()) {
             adminBtn.setVisible(false);
             adminBtn.setManaged(false);
         } else {
-            adminBtn.setOnAction(e -> loadView("/fxml/AdminPanel.fxml"));
+            adminBtn.setOnAction(e -> { loadView("/fxml/AdminPanel.fxml"); setActiveButton(adminBtn); });
         }
 
         loadView("/fxml/DashboardHome.fxml");
+        setActiveButton(dashboardBtn);
+    }
+
+    private void setActiveButton(Button active) {
+        for (Button b : new Button[]{dashboardBtn, accountsBtn, transactionBtn, transferBtn, reportsBtn, calculatorBtn, adminBtn}) {
+            b.getStyleClass().remove("sidebar-btn-active");
+        }
+        active.getStyleClass().add("sidebar-btn-active");
     }
 
     private void loadView(String fxmlPath) {

@@ -12,10 +12,10 @@ import com.finance.service.TransactionService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -52,6 +52,7 @@ public class DashboardHomeController {
     private static final DateTimeFormatter TX_DATE_FMT = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH);
     private static final DateTimeFormatter GOAL_DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
+    private static final DateTimeFormatter WEEKDAY_FMT = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH);
     private static final String[] BADGE_PALETTE = {"badge-teal", "badge-gold", "badge-blue", "badge-purple", "badge-rose", "badge-mint"};
 
     @FXML private HBox balanceCardsBox;
@@ -99,13 +100,18 @@ public class DashboardHomeController {
         refreshDashboard();
     }
 
+    private static final Category ALL_CATEGORIES_OPTION = Category.builder().id(null).name("All Categories").build();
+
     private void setupCategoryComboBox() {
         categoryComboBox.setConverter(new StringConverter<Category>() {
-            public String toString(Category c) { return c == null ? "" : c.getName() + " (" + c.getType().name() + ")"; }
+            public String toString(Category c) { return c == null ? "" : c.getName() + (c.getId() == null ? "" : " (" + c.getType().name() + ")"); }
             public Category fromString(String s) { return null; }
         });
-        categoryComboBox.setItems(FXCollections.observableArrayList(
-                categoryService.getCategoriesByUserId(sessionContext.getCurrentUserId())));
+        List<Category> items = new ArrayList<>();
+        items.add(ALL_CATEGORIES_OPTION);
+        items.addAll(categoryService.getCategoriesByUserId(sessionContext.getCurrentUserId()));
+        categoryComboBox.setItems(FXCollections.observableArrayList(items));
+        categoryComboBox.setValue(ALL_CATEGORIES_OPTION);
         categoryComboBox.setOnAction(e -> refreshCategoryCard());
     }
 
@@ -295,7 +301,7 @@ public class DashboardHomeController {
         weeklyNetLabel.setText(fmt(weekNet) + " net");
 
         weeklyChartBox.getChildren().clear();
-        double maxBarHeight = 90;
+        double maxBarHeight = 48;
         for (int i = 0; i < days.size(); i++) {
             double incH = Math.max(2, incomes.get(i).doubleValue() / max * maxBarHeight);
             double expH = Math.max(2, expenses.get(i).doubleValue() / max * maxBarHeight);
@@ -304,16 +310,27 @@ public class DashboardHomeController {
 
             Region incBar = new Region();
             incBar.getStyleClass().add("dash-bar-income");
-            incBar.setPrefSize(9, incH);
+            incBar.setPrefSize(7, incH);
+            incBar.setMinHeight(incH);
+            incBar.setMaxHeight(incH);
+
             Region expBar = new Region();
             expBar.getStyleClass().add("dash-bar-expense");
-            expBar.setPrefSize(9, expH);
+            expBar.setPrefSize(7, expH);
+            expBar.setMinHeight(expH);
+            expBar.setMaxHeight(expH);
 
             HBox bars = new HBox(3, incBar, expBar);
             bars.setAlignment(Pos.BOTTOM_CENTER);
             bars.setPrefHeight(maxBarHeight);
 
-            Label dayLabel = new Label(String.valueOf(days.get(i).getDayOfMonth()));
+            Tooltip dayTip = new Tooltip(days.get(i).format(GOAL_DATE_FMT)
+                    + "\nIncome: " + fmt(incomes.get(i))
+                    + "\nExpense: " + fmt(expenses.get(i)));
+            dayTip.setShowDelay(javafx.util.Duration.millis(100));
+            Tooltip.install(bars, dayTip);
+
+            Label dayLabel = new Label(days.get(i).format(WEEKDAY_FMT));
             dayLabel.getStyleClass().add("dash-day-label");
 
             VBox dayBox = new VBox(4, bars, dayLabel);
@@ -340,7 +357,7 @@ public class DashboardHomeController {
         // remove any previously drawn ring shapes (keep the centered label)
         expenseRingStack.getChildren().removeIf(n -> n instanceof Circle);
 
-        double radius = 38;
+        double radius = 22;
         Circle track = new Circle(radius, radius, radius);
         track.getStyleClass().add("dash-ring-track");
 
@@ -418,7 +435,7 @@ public class DashboardHomeController {
         if (trendValuesCache.isEmpty()) return;
         double width = trendChartPane.getWidth();
         if (width <= 0) width = 400;
-        double height = 60;
+        double height = 34;
 
         double min = trendValuesCache.stream().mapToDouble(BigDecimal::doubleValue).min().orElse(0);
         double max = trendValuesCache.stream().mapToDouble(BigDecimal::doubleValue).max().orElse(1);
@@ -446,32 +463,46 @@ public class DashboardHomeController {
         trendChartPane.getChildren().add(freeform);
     }
 
-    /** Goal accounts = any account with a maturity date set (typically DPS / FDR style accounts). */
+    /** Goal accounts = any account the user has explicitly marked "Show as a goal card" (via the Accounts page,
+     *  or the add/remove controls below). This is fully manual — nothing is added automatically. */
     private void buildGoalCards(List<Account> accounts) {
         goalCardsBox.getChildren().clear();
-        List<Account> goalAccounts = new ArrayList<>();
-        for (Account a : accounts) if (a.getMaturityDate() != null) goalAccounts.add(a);
+        List<Account> shown = new ArrayList<>();
+        List<Account> hidden = new ArrayList<>();
+        for (Account a : accounts) {
+            if (Boolean.TRUE.equals(a.getShowInGoals())) shown.add(a); else hidden.add(a);
+        }
 
-        if (goalAccounts.isEmpty()) {
-            Label empty = new Label("No goal accounts yet. Add a DPS or FDR account with a maturity date from the Accounts page.");
+        if (shown.isEmpty()) {
+            Label empty = new Label("No goal cards yet. Use \"Add account\" below to pin any account here.");
             empty.getStyleClass().add("dash-section-hint");
             empty.setWrapText(true);
+            empty.setMaxWidth(160);
+            empty.setPrefWidth(160);
             goalCardsBox.getChildren().add(empty);
         }
 
-        for (Account a : goalAccounts) {
+        for (Account a : shown) {
             goalCardsBox.getChildren().add(buildGoalCard(a));
         }
 
         javafx.scene.control.Button addBtn = new javafx.scene.control.Button("+  Add account");
         addBtn.getStyleClass().add("dash-add-goal-btn");
-        addBtn.setPrefSize(180, 110);
+        addBtn.setDisable(hidden.isEmpty());
         addBtn.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Add a goal account");
-            alert.setHeaderText(null);
-            alert.setContentText("Go to the Accounts page and create or edit an account with a maturity date (e.g. DPS or FDR). It will automatically appear here.");
-            alert.showAndWait();
+            if (hidden.isEmpty()) return;
+            Map<String, Account> options = new LinkedHashMap<>();
+            for (Account h : hidden) options.put(h.getName() + "  (" + h.getAccountType().getName() + ")", h);
+            List<String> labels = new ArrayList<>(options.keySet());
+            javafx.scene.control.ChoiceDialog<String> dialog = new javafx.scene.control.ChoiceDialog<>(labels.get(0), labels);
+            dialog.setTitle("Add a goal card");
+            dialog.setHeaderText(null);
+            dialog.setContentText("Choose an account to pin here:");
+            dialog.showAndWait().ifPresent(chosenLabel -> {
+                Account chosen = options.get(chosenLabel);
+                accountService.setShowInGoals(chosen.getId(), true);
+                refreshDashboard();
+            });
         });
         goalCardsBox.getChildren().add(addBtn);
     }
@@ -479,34 +510,49 @@ public class DashboardHomeController {
     private VBox buildGoalCard(Account a) {
         Label title = new Label(a.getName());
         title.getStyleClass().add("dash-goal-title");
-
-        Label matures = new Label("Matures " + a.getMaturityDate().format(GOAL_DATE_FMT));
-        matures.getStyleClass().add("dash-goal-sub");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        javafx.scene.control.Button removeBtn = new javafx.scene.control.Button("\u2715");
+        removeBtn.getStyleClass().add("dash-goal-remove-btn");
+        removeBtn.setOnAction(e -> {
+            accountService.setShowInGoals(a.getId(), false);
+            refreshDashboard();
+        });
+        HBox header = new HBox(title, spacer, removeBtn);
+        header.setAlignment(Pos.CENTER_LEFT);
 
         Label amount = new Label(fmt(a.getBalance()));
         amount.getStyleClass().add("dash-goal-amount");
 
-        double fraction = 0;
-        if (a.getCreatedAt() != null) {
-            LocalDate start = a.getCreatedAt().toLocalDate();
-            LocalDate end = a.getMaturityDate();
-            long totalDays = java.time.temporal.ChronoUnit.DAYS.between(start, end);
-            long elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(start, LocalDate.now());
-            if (totalDays > 0) fraction = Math.max(0, Math.min(1, elapsedDays / (double) totalDays));
-            else fraction = 1;
-        }
-        ProgressBar progressBar = new ProgressBar(fraction);
-        progressBar.getStyleClass().add("dash-goal-progress");
-        progressBar.setMaxWidth(Double.MAX_VALUE);
+        VBox card = new VBox(6, header, amount);
 
-        VBox card = new VBox(6, title, matures, amount, progressBar);
+        if (a.getMaturityDate() != null) {
+            Label matures = new Label("Matures " + a.getMaturityDate().format(GOAL_DATE_FMT));
+            matures.getStyleClass().add("dash-goal-sub");
+            card.getChildren().add(1, matures);
+
+            double fraction = 0;
+            if (a.getCreatedAt() != null) {
+                LocalDate start = a.getCreatedAt().toLocalDate();
+                LocalDate end = a.getMaturityDate();
+                long totalDays = java.time.temporal.ChronoUnit.DAYS.between(start, end);
+                long elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(start, LocalDate.now());
+                if (totalDays > 0) fraction = Math.max(0, Math.min(1, elapsedDays / (double) totalDays));
+                else fraction = 1;
+            }
+            ProgressBar progressBar = new ProgressBar(fraction);
+            progressBar.getStyleClass().add("dash-goal-progress");
+            progressBar.setMaxWidth(Double.MAX_VALUE);
+            card.getChildren().add(progressBar);
+        }
+
         if (a.getInstallmentAmount() != null) {
             Label installment = new Label("Installment " + fmt(a.getInstallmentAmount()) + "/month");
             installment.getStyleClass().add("dash-goal-sub");
             card.getChildren().add(installment);
         }
         card.getStyleClass().add("dash-goal-card");
-        card.setPrefWidth(200);
+        card.setPrefWidth(140);
         return card;
     }
 
@@ -514,11 +560,21 @@ public class DashboardHomeController {
         Category cat = categoryComboBox.getValue();
         if (cat == null) { clearCategoryLabels(); return; }
         Long userId = sessionContext.getCurrentUserId();
-        Long catId = cat.getId();
         LocalDate today = LocalDate.now();
         LocalDate monthStart = today.withDayOfMonth(1);
         LocalDate yearStart = today.withDayOfYear(1);
 
+        if (cat.getId() == null) {
+            catTodayIncLabel.setText(fmt(transactionService.getTotalIncome(userId, today, today)));
+            catTodayExpLabel.setText(fmt(transactionService.getTotalExpense(userId, today, today)));
+            catMonthIncLabel.setText(fmt(transactionService.getTotalIncome(userId, monthStart, today)));
+            catMonthExpLabel.setText(fmt(transactionService.getTotalExpense(userId, monthStart, today)));
+            catYearIncLabel.setText(fmt(transactionService.getTotalIncome(userId, yearStart, today)));
+            catYearExpLabel.setText(fmt(transactionService.getTotalExpense(userId, yearStart, today)));
+            return;
+        }
+
+        Long catId = cat.getId();
         catTodayIncLabel.setText(fmt(transactionService.getIncomeByCategory(userId, catId, today, today)));
         catTodayExpLabel.setText(fmt(transactionService.getExpenseByCategory(userId, catId, today, today)));
         catMonthIncLabel.setText(fmt(transactionService.getIncomeByCategory(userId, catId, monthStart, today)));

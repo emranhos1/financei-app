@@ -40,6 +40,9 @@ public class Account {
     @Column
     private BigDecimal installmentAmount;
 
+    @Column(nullable = false)
+    private Boolean showInGoals;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -51,6 +54,7 @@ public class Account {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (balance == null) balance = BigDecimal.ZERO;
+        if (showInGoals == null) showInGoals = Boolean.FALSE;
     }
 
     @PreUpdate

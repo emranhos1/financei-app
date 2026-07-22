@@ -31,6 +31,8 @@
                     <Label text="Installment Amount (optional)"/>
                     <TextField fx:id="installmentField" promptText="0.00"/>
 
+                    <CheckBox fx:id="showInGoalsCheck" text="Show as a goal card on the Dashboard"/>
+
                     <!-- Add button: shown by default -->
                     <Button fx:id="accAddBtn" text="Add Account" onAction="#handleAddAccount" maxWidth="Infinity" styleClass="btn-primary"/>
 
@@ -45,9 +47,12 @@
                 <TableView fx:id="accountsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="idColumn"      text="ID"      prefWidth="50"/>
-                        <TableColumn fx:id="nameColumn"    text="Name"    prefWidth="160"/>
-                        <TableColumn fx:id="typeColumn"    text="Type"    prefWidth="110"/>
-                        <TableColumn fx:id="balanceColumn" text="Balance" prefWidth="130"/>
+                        <TableColumn fx:id="nameColumn"    text="Name"    prefWidth="150"/>
+                        <TableColumn fx:id="typeColumn"    text="Type"    prefWidth="90"/>
+                        <TableColumn fx:id="balanceColumn" text="Balance" prefWidth="110"/>
+                        <TableColumn fx:id="maturityColumn"    text="Maturity Date" prefWidth="110"/>
+                        <TableColumn fx:id="installmentColumn" text="Installment"   prefWidth="100"/>
+                        <TableColumn fx:id="goalCardColumn"    text="Goal Card"     prefWidth="90"/>
                     </columns>
                     <placeholder><Label text="No accounts yet"/></placeholder>
                 </TableView>

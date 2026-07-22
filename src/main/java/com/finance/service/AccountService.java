@@ -23,13 +23,13 @@ public class AccountService {
     private final AccountLogRepository accountLogRepository;
 
     public Account createAccount(Long userId, String name, Long accountTypeId, BigDecimal initialBalance,
-                                 LocalDate maturityDate, BigDecimal installmentAmount) {
+                                 LocalDate maturityDate, BigDecimal installmentAmount, boolean showInGoals) {
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
         BigDecimal balance = initialBalance != null ? initialBalance : BigDecimal.ZERO;
         Account account = accountRepository.save(Account.builder()
                 .userId(userId).name(name).accountType(accountType).balance(balance)
-                .maturityDate(maturityDate).installmentAmount(installmentAmount).build());
+                .maturityDate(maturityDate).installmentAmount(installmentAmount).showInGoals(showInGoals).build());
         if (balance.compareTo(BigDecimal.ZERO) != 0) {
             accountLogRepository.save(AccountLog.builder()
                     .accountId(account.getId()).userId(userId)
@@ -51,7 +51,7 @@ public class AccountService {
     }
 
     public Account updateAccount(Long accountId, String name, Long accountTypeId, BigDecimal newBalance,
-                                 LocalDate maturityDate, BigDecimal installmentAmount) {
+                                 LocalDate maturityDate, BigDecimal installmentAmount, boolean showInGoals) {
         Account account = getAccountById(accountId);
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
@@ -61,6 +61,7 @@ public class AccountService {
         account.setBalance(newBalance);
         account.setMaturityDate(maturityDate);
         account.setInstallmentAmount(installmentAmount);
+        account.setShowInGoals(showInGoals);
         accountRepository.save(account);
         if (oldBalance.compareTo(newBalance) != 0) {
             BigDecimal diff = newBalance.subtract(oldBalance);
@@ -101,6 +102,12 @@ public class AccountService {
 
     public BigDecimal getBalanceByAccountType(Long userId, AccountType accountType) {
         return accountRepository.sumBalanceByUserIdAndAccountType(userId, accountType);
+    }
+
+    public void setShowInGoals(Long accountId, boolean show) {
+        Account account = getAccountById(accountId);
+        account.setShowInGoals(show);
+        accountRepository.save(account);
     }
 
     public void updateAccountBalance(Long accountId, BigDecimal newBalance) {

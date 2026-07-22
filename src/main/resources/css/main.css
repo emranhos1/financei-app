@@ -20,6 +20,14 @@
     -fx-text-fill: #ffffff;
 }
 
+.sidebar-btn-active {
+    -fx-background-color: #0F3B30;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-border-color: #D4AF37;
+    -fx-border-width: 0 0 0 3;
+}
+
 /* ===== GENERAL ===== */
 .content-pane {
     -fx-padding: 20;
@@ -194,19 +202,39 @@
     -fx-background-color: transparent;
 }
 
+/* Compact card/title/label variants used only on the Dashboard, so other screens
+   (Calculator, Forgot Password) that reuse .summary-card/.card-title/.card-label
+   are not affected. */
+.dash-summary-card {
+    -fx-border-color: #B7D9CE;
+    -fx-border-radius: 5;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 5;
+    -fx-padding: 7;
+}
+.dash-card-title {
+    -fx-font-size: 11;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1B5446;
+}
+.dash-card-label {
+    -fx-font-size: 11;
+    -fx-text-fill: #555555;
+}
+
 .dash-section-title {
-    -fx-font-size: 13;
+    -fx-font-size: 12;
     -fx-font-weight: bold;
     -fx-text-fill: #1B5446;
 }
 
 .dash-section-hint {
-    -fx-font-size: 11;
+    -fx-font-size: 10;
     -fx-text-fill: #8AA69C;
 }
 
 .dash-table-head {
-    -fx-font-size: 11;
+    -fx-font-size: 10;
     -fx-text-fill: #8AA69C;
     -fx-font-weight: bold;
 }
@@ -217,28 +245,28 @@
     -fx-background-radius: 10;
     -fx-border-color: #E4ECE9;
     -fx-border-radius: 10;
-    -fx-padding: 14;
+    -fx-padding: 8;
 }
 
 .dash-account-type {
-    -fx-font-size: 12;
+    -fx-font-size: 11;
     -fx-text-fill: #4F6F66;
 }
 
 .dash-account-amount {
-    -fx-font-size: 16;
+    -fx-font-size: 13;
     -fx-font-weight: bold;
     -fx-text-fill: #1B5446;
 }
 
 .dash-badge {
-    -fx-min-width: 38; -fx-min-height: 38;
-    -fx-max-width: 38; -fx-max-height: 38;
-    -fx-pref-width: 38; -fx-pref-height: 38;
-    -fx-background-radius: 19;
+    -fx-min-width: 30; -fx-min-height: 30;
+    -fx-max-width: 30; -fx-max-height: 30;
+    -fx-pref-width: 30; -fx-pref-height: 30;
+    -fx-background-radius: 15;
     -fx-alignment: CENTER;
     -fx-font-weight: bold;
-    -fx-font-size: 14;
+    -fx-font-size: 12;
 }
 .badge-teal   { -fx-background-color: #DCEFE8; -fx-text-fill: #1B5446; }
 .badge-gold   { -fx-background-color: #FBF1D9; -fx-text-fill: #9C7A16; }
@@ -249,7 +277,7 @@
 
 /* -- net worth card -- */
 .dash-networth-amount {
-    -fx-font-size: 26;
+    -fx-font-size: 20;
     -fx-font-weight: bold;
     -fx-text-fill: #1B5446;
 }
@@ -257,60 +285,74 @@
 .dash-chip {
     -fx-background-color: #F2F7F5;
     -fx-background-radius: 16;
-    -fx-padding: 5 12;
-    -fx-font-size: 12;
+    -fx-padding: 3 9;
+    -fx-font-size: 11;
     -fx-text-fill: #355C50;
 }
 
 /* -- recent transactions -- */
 .dash-tx-row {
-    -fx-padding: 7 0 7 0;
+    -fx-padding: 3 0 3 0;
     -fx-border-color: transparent transparent #EEF3F1 transparent;
     -fx-border-width: 0 0 1 0;
 }
 
 .dash-tx-icon {
-    -fx-min-width: 28; -fx-min-height: 28;
-    -fx-max-width: 28; -fx-max-height: 28;
-    -fx-pref-width: 28; -fx-pref-height: 28;
-    -fx-background-radius: 8;
+    -fx-min-width: 22; -fx-min-height: 22;
+    -fx-max-width: 22; -fx-max-height: 22;
+    -fx-pref-width: 22; -fx-pref-height: 22;
+    -fx-background-radius: 7;
     -fx-alignment: CENTER;
     -fx-font-weight: bold;
-    -fx-font-size: 13;
+    -fx-font-size: 11;
 }
 .dash-tx-icon-in       { -fx-background-color: #E1F5EC; -fx-text-fill: #1E7B45; }
 .dash-tx-icon-out      { -fx-background-color: #FBE7E9; -fx-text-fill: #C0392B; }
 .dash-tx-icon-transfer { -fx-background-color: #E3EEFB; -fx-text-fill: #1D5FA8; }
 
-.dash-tx-title { -fx-font-size: 13; -fx-text-fill: #26362F; }
-.dash-tx-sub   { -fx-font-size: 11; -fx-text-fill: #8AA69C; }
+.dash-tx-title { -fx-font-size: 11; -fx-text-fill: #26362F; }
+.dash-tx-sub   { -fx-font-size: 9;  -fx-text-fill: #8AA69C; }
 
-.dash-tx-amount-pos     { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #1E7B45; }
-.dash-tx-amount-neg     { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #C0392B; }
-.dash-tx-amount-neutral { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #26362F; }
+.dash-tx-amount-pos     { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: #1E7B45; }
+.dash-tx-amount-neg     { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: #C0392B; }
+.dash-tx-amount-neutral { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: #26362F; }
 
 /* -- weekly bar chart -- */
-.dash-trend-amount { -fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #26362F; }
+.dash-trend-amount { -fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #26362F; }
 .dash-bar-income   { -fx-background-color: #2E9E5B; -fx-background-radius: 2 2 0 0; }
 .dash-bar-expense  { -fx-background-color: #D9636E; -fx-background-radius: 2 2 0 0; }
-.dash-day-label    { -fx-font-size: 10; -fx-text-fill: #8AA69C; }
+.dash-day-label    { -fx-font-size: 9; -fx-text-fill: #8AA69C; }
+
+.dash-legend-dot-income {
+    -fx-background-color: #2E9E5B;
+    -fx-background-radius: 4;
+    -fx-min-width: 7; -fx-min-height: 7;
+    -fx-max-width: 7; -fx-max-height: 7;
+}
+.dash-legend-dot-expense {
+    -fx-background-color: #D9636E;
+    -fx-background-radius: 4;
+    -fx-min-width: 7; -fx-min-height: 7;
+    -fx-max-width: 7; -fx-max-height: 7;
+}
+.dash-legend-label { -fx-font-size: 10; -fx-text-fill: #8AA69C; }
 
 /* -- expense ratio ring -- */
 .dash-ring-track {
     -fx-fill: transparent;
     -fx-stroke: #EEF3F1;
-    -fx-stroke-width: 8;
+    -fx-stroke-width: 6;
 }
 .dash-ring-progress {
     -fx-fill: transparent;
     -fx-stroke: #D9636E;
-    -fx-stroke-width: 8;
+    -fx-stroke-width: 6;
 }
-.dash-ring-label { -fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #26362F; }
-.dash-ring-sub   { -fx-font-size: 10; -fx-text-fill: #8AA69C; }
+.dash-ring-label { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: #26362F; }
+.dash-ring-sub   { -fx-font-size: 9; -fx-text-fill: #8AA69C; }
 
-.dash-top-expense-label { -fx-font-size: 11; -fx-text-fill: #8AA69C; }
-.dash-top-expense-value { -fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #26362F; }
+.dash-top-expense-label { -fx-font-size: 10; -fx-text-fill: #8AA69C; }
+.dash-top-expense-value { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #26362F; }
 
 /* -- net worth trend line -- */
 .dash-trend-line { -fx-stroke: #2E9E5B; -fx-stroke-width: 2; -fx-fill: transparent; }
@@ -322,11 +364,25 @@
     -fx-border-color: #E4ECE9;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-padding: 12;
+    -fx-padding: 6;
 }
-.dash-goal-title  { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #26362F; }
-.dash-goal-sub    { -fx-font-size: 10; -fx-text-fill: #8AA69C; }
-.dash-goal-amount { -fx-font-size: 15; -fx-font-weight: bold; -fx-text-fill: #1B5446; }
+.dash-goal-title  { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: #26362F; }
+.dash-goal-sub    { -fx-font-size: 9;  -fx-text-fill: #8AA69C; }
+.dash-goal-amount { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #1B5446; }
+
+.dash-goal-remove-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #B0BEC0;
+    -fx-font-size: 10;
+    -fx-padding: 1 3;
+    -fx-cursor: hand;
+    -fx-min-width: 16; -fx-min-height: 16;
+}
+.dash-goal-remove-btn:hover {
+    -fx-text-fill: #C0392B;
+    -fx-background-color: #FBE7E9;
+    -fx-background-radius: 8;
+}
 
 .dash-goal-progress > .track { -fx-background-color: #EEF3F1; -fx-background-radius: 4; }
 .dash-goal-progress > .bar   { -fx-background-color: #D4AF37; -fx-background-radius: 4; -fx-padding: 3; }
@@ -334,12 +390,14 @@
 .dash-add-goal-btn {
     -fx-background-color: transparent;
     -fx-border-color: #B7D9CE;
-    -fx-border-style: segments(4,3);
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
+    -fx-border-style: dashed;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
     -fx-text-fill: #4F6F66;
     -fx-cursor: hand;
-    -fx-font-size: 12;
+    -fx-font-size: 10;
+    -fx-padding: 4 8;
 }
 .dash-add-goal-btn:hover {
     -fx-background-color: #F2F7F5;
