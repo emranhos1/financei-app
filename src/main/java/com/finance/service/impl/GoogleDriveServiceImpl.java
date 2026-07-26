@@ -1,0 +1,185 @@
+package com.finance.service.impl;
+
+import com.finance.service.IGoogleDriveService;
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.FileContent;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.client.util.store.FileDataStoreFactory;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
+import com.google.api.services.drive.model.FileList;
+import org.springframework.stereotype.Service;
+
+import java.awt.Desktop;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+
+@Service
+public class GoogleDriveServiceImpl implements IGoogleDriveService {
+
+    private static final String APPLICATION_NAME = "Daily Finance Management System";
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+    private static final String TOKENS_DIRECTORY_PATH = "tokens";
+    private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_FILE);
+    private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
+    private static final String BACKUP_NAME_PREFIX = "backup_data";
+    private static final String APP_FOLDER_NAME = "finance_app";
+    private static final String FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+
+    private Drive driveService;
+
+    @Override
+    public boolean isConnected() {
+        return driveService != null;
+    }
+
+    @Override
+    public void connect() throws Exception {
+        NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+        Credential credential = getCredentials(httpTransport);
+        driveService = new Drive.Builder(httpTransport, JSON_FACTORY, credential)
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+    }
+
+    @Override
+    public String upload(File localDumpFile) throws Exception {
+        ensureConnected();
+        if (localDumpFile == null || !localDumpFile.isFile()) {
+            throw new IllegalArgumentException("No local backup file to upload");
+        }
+
+        String folderId = getOrCreateAppFolderId();
+
+        com.google.api.services.drive.model.File fileMetadata = new com.google.api.services.drive.model.File();
+        fileMetadata.setName(localDumpFile.getName());
+        fileMetadata.setParents(Collections.singletonList(folderId));
+        FileContent mediaContent = new FileContent("application/sql", localDumpFile);
+
+        com.google.api.services.drive.model.File uploaded = driveService.files()
+                .create(fileMetadata, mediaContent)
+                .setFields("id, name, modifiedTime")
+                .execute();
+
+        return "Uploaded " + uploaded.getName() + " to Google Drive (" + APP_FOLDER_NAME + " folder)";
+    }
+
+    @Override
+    public File downloadLatest(File targetFolder) throws Exception {
+        ensureConnected();
+        if (targetFolder == null || !targetFolder.isDirectory()) {
+            throw new IllegalArgumentException("Invalid download destination folder");
+        }
+
+        String folderId = getOrCreateAppFolderId();
+
+        FileList result = driveService.files().list()
+                .setQ("'" + folderId + "' in parents and name contains '" + BACKUP_NAME_PREFIX + "' and trashed = false")
+                .setOrderBy("modifiedTime desc")
+                .setPageSize(1)
+                .setFields("files(id, name, modifiedTime)")
+                .execute();
+
+        List<com.google.api.services.drive.model.File> files = result.getFiles();
+        if (files == null || files.isEmpty()) {
+            throw new Exception("No " + BACKUP_NAME_PREFIX + "*.sql file found in the " + APP_FOLDER_NAME + " folder on Google Drive");
+        }
+        com.google.api.services.drive.model.File latest = files.get(0);
+
+        File outputFile = new File(targetFolder, latest.getName());
+        try (OutputStream out = new FileOutputStream(outputFile)) {
+            driveService.files().get(latest.getId()).executeMediaAndDownloadTo(out);
+        }
+        return outputFile;
+    }
+
+    /** Finds this app's dedicated "finance_app" Drive folder, creating it the first time if it doesn't exist yet. */
+    private String getOrCreateAppFolderId() throws IOException {
+        FileList result = driveService.files().list()
+                .setQ("mimeType = '" + FOLDER_MIME_TYPE + "' and name = '" + APP_FOLDER_NAME + "' and trashed = false")
+                .setFields("files(id, name)")
+                .execute();
+
+        List<com.google.api.services.drive.model.File> folders = result.getFiles();
+        if (folders != null && !folders.isEmpty()) {
+            return folders.get(0).getId();
+        }
+
+        com.google.api.services.drive.model.File folderMetadata = new com.google.api.services.drive.model.File();
+        folderMetadata.setName(APP_FOLDER_NAME);
+        folderMetadata.setMimeType(FOLDER_MIME_TYPE);
+        com.google.api.services.drive.model.File folder = driveService.files().create(folderMetadata)
+                .setFields("id")
+                .execute();
+        return folder.getId();
+    }
+
+    private Credential getCredentials(NetHttpTransport httpTransport) throws IOException {
+        InputStream in = GoogleDriveServiceImpl.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
+        if (in == null) {
+            throw new FileNotFoundException("credentials.json not found in resources. Replace the placeholder " +
+                    "src/main/resources/credentials.json with your real Google OAuth2 credentials before connecting.");
+        }
+        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                httpTransport, JSON_FACTORY, clientSecrets, SCOPES)
+                .setDataStoreFactory(new FileDataStoreFactory(new File(TOKENS_DIRECTORY_PATH)))
+                .setAccessType("offline")
+                .build();
+        LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
+        return new AuthorizationCodeInstalledApp(flow, receiver, this::openBrowser).authorize("user");
+    }
+
+    /**
+     * The library's default browse() only prints the URL to the console and swallows any failure,
+     * so on machines where Desktop.browse() doesn't work it hangs forever with no visible error.
+     * This opens the browser directly and falls back to an OS-specific command, throwing a clear
+     * error (surfaced in the UI) only if every attempt fails.
+     */
+    private void openBrowser(String url) throws IOException {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            try {
+                Desktop.getDesktop().browse(URI.create(url));
+                return;
+            } catch (Exception ignored) {
+                // fall through to OS-specific fallback below
+            }
+        }
+        try {
+            String os = System.getProperty("os.name", "").toLowerCase();
+            ProcessBuilder pb;
+            if (os.contains("win")) {
+                pb = new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", url);
+            } else if (os.contains("mac")) {
+                pb = new ProcessBuilder("open", url);
+            } else {
+                pb = new ProcessBuilder("xdg-open", url);
+            }
+            pb.start();
+        } catch (Exception e) {
+            throw new IOException("Could not open your default browser automatically. Please open this address manually to sign in: " + url, e);
+        }
+    }
+
+    private void ensureConnected() throws Exception {
+        if (driveService == null) {
+            throw new Exception("Not connected to Google Drive. Click 'Connect Google Drive' first.");
+        }
+    }
+}

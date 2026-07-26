@@ -35,3 +35,7 @@ dist/
 *.jar
 *.war
 *.ear
+
+# Google Drive OAuth secrets (real credentials.json contains a real client_secret - never commit it)
+src/main/resources/credentials.json
+tokens/

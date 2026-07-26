@@ -46,6 +46,9 @@ public class DashboardController {
     private Button adminBtn;
 
     @FXML
+    private Button backupRestoreBtn;
+
+    @FXML
     private Button logoutBtn;
 
     @FXML
@@ -61,8 +64,11 @@ public class DashboardController {
         if (!sessionContext.isAdmin()) {
             adminBtn.setVisible(false);
             adminBtn.setManaged(false);
+            backupRestoreBtn.setVisible(false);
+            backupRestoreBtn.setManaged(false);
         } else {
             adminBtn.setOnAction(e -> { loadView("/fxml/AdminPanel.fxml"); setActiveButton(adminBtn); });
+            backupRestoreBtn.setOnAction(e -> { loadView("/fxml/BackupRestore.fxml"); setActiveButton(backupRestoreBtn); });
         }
 
         loadView("/fxml/DashboardHome.fxml");
@@ -70,7 +76,7 @@ public class DashboardController {
     }
 
     private void setActiveButton(Button active) {
-        for (Button b : new Button[]{dashboardBtn, accountsBtn, transactionBtn, transferBtn, reportsBtn, calculatorBtn, adminBtn}) {
+        for (Button b : new Button[]{dashboardBtn, accountsBtn, transactionBtn, transferBtn, reportsBtn, calculatorBtn, adminBtn, backupRestoreBtn}) {
             b.getStyleClass().remove("sidebar-btn-active");
         }
         active.getStyleClass().add("sidebar-btn-active");

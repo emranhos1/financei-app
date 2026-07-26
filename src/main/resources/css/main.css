@@ -194,6 +194,14 @@
     -fx-border-color: transparent transparent transparent transparent;
 }
 
+/* ===== BACKUP & RESTORE ===== */
+.backup-status-success {
+    -fx-text-fill: #1E7B45;
+}
+.backup-status-error {
+    -fx-text-fill: #c0392b;
+}
+
 /* ===== DASHBOARD REDESIGN ===== */
 .dash-scroll {
     -fx-background-color: transparent;
