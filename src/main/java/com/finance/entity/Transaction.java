@@ -43,6 +43,9 @@ public class Transaction {
     @Column
     private Long toAccountId;
 
+    @Column
+    private Long transferTypeId;
+
     @Column(length = 500)
     private String note;
 

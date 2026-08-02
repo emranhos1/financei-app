@@ -64,7 +64,7 @@ public class TransactionService {
     }
 
     public Transaction recordTransferTransaction(Long userId, LocalDate date, BigDecimal amount,
-                                                 Long fromAccountId, Long toAccountId, String note) {
+                                                 Long fromAccountId, Long toAccountId, Long transferTypeId, String note) {
         Account fromAccount = accountRepository.findById(fromAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("From account not found"));
         Account toAccount = accountRepository.findById(toAccountId)
@@ -89,7 +89,8 @@ public class TransactionService {
 
         Transaction tx = transactionRepository.save(Transaction.builder()
                 .userId(userId).date(date).type(Transaction.TransactionType.TRANSFER)
-                .amount(amount).fromAccountId(fromAccountId).toAccountId(toAccountId).note(note).build());
+                .amount(amount).fromAccountId(fromAccountId).toAccountId(toAccountId)
+                .transferTypeId(transferTypeId).note(note).build());
 
         accountService.logBalanceChange(fromAccountId, userId, fromBefore, fromAccount.getBalance(),
                 AccountLog.ChangeType.DEBIT, AccountLog.ReferenceType.TRANSFER, tx.getId(), note);
@@ -99,7 +100,7 @@ public class TransactionService {
     }
 
     public Transaction updateTransaction(Long transactionId, Long userId, LocalDate date,
-                                         BigDecimal newAmount, Long categoryId, String note) {
+                                         BigDecimal newAmount, Long categoryId, Long transferTypeId, String note) {
         Transaction tx = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
         if (!tx.getUserId().equals(userId)) throw new IllegalArgumentException("Access denied");
@@ -148,6 +149,7 @@ public class TransactionService {
         tx.setDate(date);
         tx.setAmount(newAmount);
         tx.setCategoryId(categoryId);
+        tx.setTransferTypeId(transferTypeId);
         tx.setNote(note);
         return transactionRepository.save(tx);
     }

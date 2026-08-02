@@ -7,6 +7,7 @@ import com.finance.entity.Transaction;
 import com.finance.service.AccountService;
 import com.finance.service.CategoryService;
 import com.finance.service.TransactionService;
+import com.finance.service.TransferTypeService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -32,6 +33,7 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategoryService categoryService;
+    private final TransferTypeService transferTypeService;
 
     @FXML private RadioButton incomeRadio;
     @FXML private RadioButton expenseRadio;
@@ -151,7 +153,14 @@ public class TransactionController {
         });
 
         categoryColumn.setCellValueFactory(cd -> {
-            Long catId = cd.getValue().getCategoryId();
+            Transaction tx = cd.getValue();
+            if (tx.getType() == Transaction.TransactionType.TRANSFER) {
+                Long typeId = tx.getTransferTypeId();
+                if (typeId == null) return new SimpleStringProperty("-");
+                try { return new SimpleStringProperty(transferTypeService.getTransferTypeById(typeId).getName()); }
+                catch (Exception e) { return new SimpleStringProperty("-"); }
+            }
+            Long catId = tx.getCategoryId();
             if (catId == null) return new SimpleStringProperty("-");
             try { return new SimpleStringProperty(categoryService.getCategoryById(catId).getName()); }
             catch (Exception e) { return new SimpleStringProperty("-"); }
@@ -278,7 +287,7 @@ public class TransactionController {
         try {
             BigDecimal amount = new BigDecimal(amountStr);
             Long categoryId = category.getId();
-            transactionService.updateTransaction(selectedTransaction.getId(), sessionContext.getCurrentUserId(), date, amount, categoryId, note);
+            transactionService.updateTransaction(selectedTransaction.getId(), sessionContext.getCurrentUserId(), date, amount, categoryId, null, note);
             resetTransactionForm();
             loadTransactions();
         } catch (NumberFormatException e) {

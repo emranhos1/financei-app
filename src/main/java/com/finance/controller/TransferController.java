@@ -3,8 +3,10 @@ package com.finance.controller;
 import com.finance.context.SessionContext;
 import com.finance.entity.Account;
 import com.finance.entity.Transaction;
+import com.finance.entity.TransferType;
 import com.finance.service.AccountService;
 import com.finance.service.TransactionService;
+import com.finance.service.TransferTypeService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -26,10 +28,12 @@ public class TransferController {
     private final SessionContext sessionContext;
     private final TransactionService transactionService;
     private final AccountService accountService;
+    private final TransferTypeService transferTypeService;
 
     @FXML private DatePicker datePicker;
     @FXML private ComboBox<Account> fromAccountComboBox;
     @FXML private ComboBox<Account> toAccountComboBox;
+    @FXML private ComboBox<TransferType> transferTypeComboBox;
     @FXML private TextField amountField;
     @FXML private TextArea noteArea;
     @FXML private Button saveTransferBtn;
@@ -40,8 +44,16 @@ public class TransferController {
     @FXML private TableColumn<Transaction, String> typeColumn;
     @FXML private TableColumn<Transaction, String> fromColumn;
     @FXML private TableColumn<Transaction, String> toColumn;
+    @FXML private TableColumn<Transaction, String> transferTypeColumn;
     @FXML private TableColumn<Transaction, BigDecimal> amountColumn;
     @FXML private TableColumn<Transaction, String> noteColumn;
+
+    @FXML private TableView<TransferType> typesTable;
+    @FXML private TableColumn<TransferType, Long> typeIdColumn;
+    @FXML private TableColumn<TransferType, String> typeNameColumn;
+    @FXML private TextField typeNameField;
+    @FXML private Button typeAddBtn;
+    @FXML private HBox typeEditButtons;
 
     private Transaction selectedTransfer = null;
 
@@ -49,10 +61,13 @@ public class TransferController {
     public void initialize() {
         setupAccountComboBoxes();
         setupTable();
+        setupTypesTable();
         loadAccounts();
+        loadTypes();
         loadTransfers();
         datePicker.setValue(LocalDate.now());
         resetForm();
+        resetTypeForm();
     }
 
     private void setupAccountComboBoxes() {
@@ -64,6 +79,11 @@ public class TransferController {
         };
         fromAccountComboBox.setConverter(converter);
         toAccountComboBox.setConverter(converter);
+
+        transferTypeComboBox.setConverter(new StringConverter<TransferType>() {
+            public String toString(TransferType t) { return t == null ? "" : t.getName(); }
+            public TransferType fromString(String s) { return null; }
+        });
     }
 
     private void setupTable() {
@@ -87,6 +107,13 @@ public class TransferController {
             catch (Exception e) { return new SimpleStringProperty("-"); }
         });
 
+        transferTypeColumn.setCellValueFactory(cd -> {
+            Long typeId = cd.getValue().getTransferTypeId();
+            if (typeId == null) return new SimpleStringProperty("-");
+            try { return new SimpleStringProperty(transferTypeService.getTransferTypeById(typeId).getName()); }
+            catch (Exception e) { return new SimpleStringProperty("-"); }
+        });
+
         transfersTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
             if (sel != null) populateFormForEdit(sel);
         });
@@ -102,6 +129,9 @@ public class TransferController {
                 .filter(a -> a.getId().equals(tx.getFromAccountId())).findFirst().ifPresent(fromAccountComboBox::setValue);
         if (tx.getToAccountId() != null) toAccountComboBox.getItems().stream()
                 .filter(a -> a.getId().equals(tx.getToAccountId())).findFirst().ifPresent(toAccountComboBox::setValue);
+        if (tx.getTransferTypeId() != null) transferTypeComboBox.getItems().stream()
+                .filter(t -> t.getId().equals(tx.getTransferTypeId())).findFirst().ifPresent(transferTypeComboBox::setValue);
+        else transferTypeComboBox.setValue(null);
 
         saveTransferBtn.setVisible(false);
         saveTransferBtn.setManaged(false);
@@ -124,11 +154,12 @@ public class TransferController {
     public void handleSaveTransfer() {
         Account from = fromAccountComboBox.getValue();
         Account to = toAccountComboBox.getValue();
+        TransferType transferType = transferTypeComboBox.getValue();
         LocalDate date = datePicker.getValue();
         String amountStr = amountField.getText().trim();
         String note = noteArea.getText().trim();
-        if (from == null || to == null || amountStr.isEmpty()) {
-            showAlert("Validation Error", "From Account, To Account and Amount are required"); return;
+        if (from == null || to == null || amountStr.isEmpty() || transferType == null) {
+            showAlert("Validation Error", "From Account, To Account, Transfer Type and Amount are required"); return;
         }
         if (from.getId().equals(to.getId())) {
             showAlert("Validation Error", "Source and destination accounts must be different"); return;
@@ -136,7 +167,8 @@ public class TransferController {
         if (!confirm("Save this transfer?")) return;
         try {
             transactionService.recordTransferTransaction(
-                    sessionContext.getCurrentUserId(), date, new BigDecimal(amountStr), from.getId(), to.getId(), note);
+                    sessionContext.getCurrentUserId(), date, new BigDecimal(amountStr), from.getId(), to.getId(),
+                    transferType.getId(), note);
             resetForm(); loadAccounts(); loadTransfers();
         } catch (NumberFormatException e) {
             showAlert("Validation Error", "Amount must be a valid number");
@@ -149,11 +181,14 @@ public class TransferController {
         LocalDate date = datePicker.getValue();
         String amountStr = amountField.getText().trim();
         String note = noteArea.getText().trim();
-        if (amountStr.isEmpty()) { showAlert("Validation Error", "Amount is required"); return; }
+        TransferType transferType = transferTypeComboBox.getValue();
+        if (amountStr.isEmpty() || transferType == null) {
+            showAlert("Validation Error", "Amount and Transfer Type are required"); return;
+        }
         if (!confirm("Update this transfer?")) return;
         try {
             transactionService.updateTransaction(selectedTransfer.getId(), sessionContext.getCurrentUserId(),
-                    date, new BigDecimal(amountStr), null, note);
+                    date, new BigDecimal(amountStr), null, transferType.getId(), note);
             resetForm(); loadAccounts(); loadTransfers();
         } catch (NumberFormatException e) {
             showAlert("Validation Error", "Amount must be a valid number");
@@ -178,6 +213,7 @@ public class TransferController {
         datePicker.setValue(LocalDate.now());
         fromAccountComboBox.setValue(null);
         toAccountComboBox.setValue(null);
+        transferTypeComboBox.setValue(null);
         amountField.clear();
         noteArea.clear();
         transfersTable.getSelectionModel().clearSelection();
@@ -185,6 +221,59 @@ public class TransferController {
         saveTransferBtn.setManaged(true);
         txEditButtons.setVisible(false);
         txEditButtons.setManaged(false);
+    }
+
+    private void setupTypesTable() {
+        typeIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        typeNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        typesTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
+            if (sel != null) {
+                typeNameField.setText(sel.getName());
+                typeAddBtn.setVisible(false); typeAddBtn.setManaged(false);
+                typeEditButtons.setVisible(true); typeEditButtons.setManaged(true);
+            }
+        });
+    }
+
+    private void loadTypes() {
+        List<TransferType> types = transferTypeService.getTransferTypesByUserId(sessionContext.getCurrentUserId());
+        transferTypeComboBox.setItems(FXCollections.observableArrayList(types));
+        typesTable.setItems(FXCollections.observableArrayList(types));
+    }
+
+    @FXML public void handleAddType() {
+        String name = typeNameField.getText().trim();
+        if (name.isEmpty()) { showAlert("Validation Error", "Type name cannot be empty"); return; }
+        if (!confirm("Add transfer type '" + name + "'?")) return;
+        try { transferTypeService.createTransferType(sessionContext.getCurrentUserId(), name); resetTypeForm(); loadTypes();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
+
+    @FXML public void handleUpdateType() {
+        TransferType sel = typesTable.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        String name = typeNameField.getText().trim();
+        if (name.isEmpty()) { showAlert("Validation Error", "Name cannot be empty"); return; }
+        if (!confirm("Update type '" + sel.getName() + "' to '" + name + "'?")) return;
+        try { transferTypeService.updateTransferType(sel.getId(), sessionContext.getCurrentUserId(), name); resetTypeForm(); loadTypes();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
+
+    @FXML public void handleDeleteType() {
+        TransferType sel = typesTable.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        if (!confirm("Delete type '" + sel.getName() + "'?")) return;
+        try { transferTypeService.deleteTransferType(sel.getId(), sessionContext.getCurrentUserId()); resetTypeForm(); loadTypes();
+        } catch (Exception e) { showAlert("Error", e.getMessage()); }
+    }
+
+    @FXML public void handleCancelType() { resetTypeForm(); }
+
+    private void resetTypeForm() {
+        typeNameField.clear();
+        typesTable.getSelectionModel().clearSelection();
+        typeAddBtn.setVisible(true); typeAddBtn.setManaged(true);
+        typeEditButtons.setVisible(false); typeEditButtons.setManaged(false);
     }
 
     private boolean confirm(String msg) {

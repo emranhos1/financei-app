@@ -20,6 +20,15 @@ CREATE TABLE IF NOT EXISTS account_types (
     UNIQUE KEY uk_user_type (user_id, name)
     );
 
+CREATE TABLE IF NOT EXISTS transfer_types (
+                                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                              user_id BIGINT NOT NULL,
+                                              name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_transfer_type (user_id, name)
+    );
+
 CREATE TABLE IF NOT EXISTS accounts (
                                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                         user_id BIGINT NOT NULL,
@@ -81,6 +90,18 @@ CREATE TABLE IF NOT EXISTS transactions (
     INDEX idx_from_account (from_account_id),
     INDEX idx_to_account (to_account_id)
     );
+
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transactions' AND COLUMN_NAME = 'transfer_type_id'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE transactions ADD COLUMN transfer_type_id BIGINT NULL, ADD FOREIGN KEY (transfer_type_id) REFERENCES transfer_types(id) ON DELETE SET NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS account_logs (
                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
