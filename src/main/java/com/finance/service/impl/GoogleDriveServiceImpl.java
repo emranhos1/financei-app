@@ -25,9 +25,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class GoogleDriveServiceImpl implements IGoogleDriveService {
@@ -40,8 +51,10 @@ public class GoogleDriveServiceImpl implements IGoogleDriveService {
     private static final String BACKUP_NAME_PREFIX = "backup_data";
     private static final String APP_FOLDER_NAME = "finance_app";
     private static final String FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+    private static final int SIGN_IN_TIMEOUT_SECONDS = 60;
 
     private Drive driveService;
+    private Credential currentCredential;
 
     @Override
     public boolean isConnected() {
@@ -55,6 +68,40 @@ public class GoogleDriveServiceImpl implements IGoogleDriveService {
         driveService = new Drive.Builder(httpTransport, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
                 .build();
+        currentCredential = credential;
+    }
+
+    @Override
+    public void disconnect() throws Exception {
+        if (currentCredential != null) {
+            String token = currentCredential.getRefreshToken() != null
+                    ? currentCredential.getRefreshToken() : currentCredential.getAccessToken();
+            if (token != null) {
+                try {
+                    revokeToken(token);
+                } catch (Exception ignored) {
+                    // best-effort - still clear local state below even if revoking with Google fails (e.g. offline)
+                }
+            }
+        }
+        deleteStoredTokens();
+        currentCredential = null;
+        driveService = null;
+    }
+
+    private void revokeToken(String token) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL("https://oauth2.googleapis.com/revoke?token=" + token).openConnection();
+        conn.setRequestMethod("POST");
+        conn.getResponseCode();
+        conn.disconnect();
+    }
+
+    private void deleteStoredTokens() throws IOException {
+        File tokensDir = new File(TOKENS_DIRECTORY_PATH);
+        if (!tokensDir.exists()) return;
+        try (var paths = Files.walk(tokensDir.toPath())) {
+            paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+        }
     }
 
     @Override
@@ -129,7 +176,7 @@ public class GoogleDriveServiceImpl implements IGoogleDriveService {
         return folder.getId();
     }
 
-    private Credential getCredentials(NetHttpTransport httpTransport) throws IOException {
+    private Credential getCredentials(NetHttpTransport httpTransport) throws Exception {
         InputStream in = GoogleDriveServiceImpl.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
         if (in == null) {
             throw new FileNotFoundException("credentials.json not found in resources. Replace the placeholder " +
@@ -143,7 +190,37 @@ public class GoogleDriveServiceImpl implements IGoogleDriveService {
                 .setAccessType("offline")
                 .build();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-        return new AuthorizationCodeInstalledApp(flow, receiver, this::openBrowser).authorize("user");
+        AuthorizationCodeInstalledApp app = new AuthorizationCodeInstalledApp(flow, receiver, this::openBrowser);
+
+        // If the user closes the browser tab without finishing sign-in, authorize() blocks forever
+        // waiting on the local callback server, and that server keeps holding port 8888. Bound the
+        // wait so an abandoned attempt gives up on its own and frees the port for the next try.
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "google-oauth-signin");
+            t.setDaemon(true);
+            return t;
+        });
+        try {
+            Future<Credential> future = executor.submit(() -> app.authorize("user"));
+            try {
+                return future.get(SIGN_IN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                future.cancel(true);
+                throw new IOException("Google sign-in timed out after " + SIGN_IN_TIMEOUT_SECONDS +
+                        " seconds. Click 'Connect Google Drive' to try again.");
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) throw (Exception) cause;
+                throw new IOException("Google sign-in failed", cause);
+            }
+        } finally {
+            try {
+                receiver.stop();
+            } catch (Exception ignored) {
+                // best-effort - the port must be freed even if the receiver was never fully started
+            }
+            executor.shutdownNow();
+        }
     }
 
     /**

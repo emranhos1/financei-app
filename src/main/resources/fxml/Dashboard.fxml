@@ -28,7 +28,6 @@
             <Button fx:id="reportsBtn"     text="Reports"     styleClass="sidebar-btn"/>
             <Button fx:id="calculatorBtn"  text="Calculator"  styleClass="sidebar-btn"/>
             <Button fx:id="adminBtn"       text="Admin Panel" styleClass="sidebar-btn"/>
-            <Button fx:id="backupRestoreBtn" text="Backup &amp; Restore" styleClass="sidebar-btn"/>
 
             <!-- Spacer pushes Logout to bottom -->
             <Region VBox.vgrow="ALWAYS"/>
