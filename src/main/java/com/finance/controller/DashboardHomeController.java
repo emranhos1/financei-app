@@ -75,6 +75,9 @@ public class DashboardHomeController {
 
     @FXML private FlowPane goalCardsBox;
 
+    @FXML private VBox cashMonthlyExpenseBox;
+    @FXML private VBox bankMonthlyExpenseBox;
+
     @FXML private Label todayIncomeLabel;
     @FXML private Label todayExpenseLabel;
     @FXML private Label monthIncomeLabel;
@@ -131,6 +134,8 @@ public class DashboardHomeController {
         buildTopExpense(userId, monthStart, today);
         buildNetWorthTrend(userId, today);
         buildGoalCards(accounts);
+        buildMonthlyExpenseByType(cashMonthlyExpenseBox, userId, accounts, "CASH");
+        buildMonthlyExpenseByType(bankMonthlyExpenseBox, userId, accounts, "BANK");
 
         BigDecimal tInc = transactionService.getTotalIncome(userId, today, today);
         BigDecimal tExp = transactionService.getTotalExpense(userId, today, today);
@@ -155,6 +160,7 @@ public class DashboardHomeController {
         List<AccountType> types = accountTypeService.getAccountTypesByUserId(userId);
         for (AccountType at : types) {
             BigDecimal balance = accountService.getBalanceByAccountType(userId, at);
+            if (balance.compareTo(BigDecimal.ZERO) == 0) continue;
 
             Label badge = new Label(initials(at.getName()));
             badge.getStyleClass().addAll("dash-badge", paletteClass(at.getName()));
@@ -175,11 +181,14 @@ public class DashboardHomeController {
         }
     }
 
-    /** "Net worth" here means liquid funds: any account WITHOUT a maturity date (e.g. Bank, Cash type accounts).
-     *  Accounts WITH a maturity date (e.g. DPS, FDR) are treated as goal accounts and shown separately below. */
+    /** "Net worth" here means Bank and Cash type accounts only; every other account type
+     *  (Business, Plot, DPS, FDR, etc.) is excluded from this figure. */
     private void buildNetWorthAndChips(List<Account> accounts) {
         List<Account> liquidAccounts = new ArrayList<>();
-        for (Account a : accounts) if (a.getMaturityDate() == null) liquidAccounts.add(a);
+        for (Account a : accounts) {
+            String typeName = a.getAccountType().getName();
+            if ("BANK".equalsIgnoreCase(typeName) || "CASH".equalsIgnoreCase(typeName)) liquidAccounts.add(a);
+        }
 
         BigDecimal total = BigDecimal.ZERO;
         Map<Long, AccountType> typeById = new LinkedHashMap<>();
@@ -554,6 +563,47 @@ public class DashboardHomeController {
         card.getStyleClass().add("dash-goal-card");
         card.setPrefWidth(140);
         return card;
+    }
+
+    /** Shows the current year's Jan–Dec expense total for every account of the given account type
+     *  (e.g. "CASH" or "BANK"), plus a Total and a 12-month Average row. */
+    private void buildMonthlyExpenseByType(VBox container, Long userId, List<Account> accounts, String typeName) {
+        container.getChildren().clear();
+
+        List<Long> accountIds = new ArrayList<>();
+        for (Account a : accounts) {
+            if (typeName.equalsIgnoreCase(a.getAccountType().getName())) accountIds.add(a.getId());
+        }
+
+        int year = LocalDate.now().getYear();
+        BigDecimal total = BigDecimal.ZERO;
+        for (int month = 1; month <= 12; month++) {
+            YearMonth ym = YearMonth.of(year, month);
+            BigDecimal amount = transactionService.getExpenseByAccountIds(userId, accountIds, ym.atDay(1), ym.atEndOfMonth());
+            total = total.add(amount);
+            container.getChildren().add(buildMonthlyExpenseRow(
+                    ym.format(MONTH_FMT).toUpperCase(Locale.ENGLISH), fmt(amount), "dash-monthly-row"));
+        }
+
+        BigDecimal avg = total.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+        container.getChildren().add(buildMonthlyExpenseRow("Total", fmt(total), "dash-monthly-row-total"));
+        container.getChildren().add(buildMonthlyExpenseRow("AVG", fmt(avg), "dash-monthly-row-avg"));
+    }
+
+    private HBox buildMonthlyExpenseRow(String label, String value, String rowStyleClass) {
+        Label nameLabel = new Label(label);
+        nameLabel.getStyleClass().add("dash-card-label");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label valueLabel = new Label(value);
+        valueLabel.getStyleClass().add("dash-card-label");
+
+        HBox row = new HBox(nameLabel, spacer, valueLabel);
+        row.getStyleClass().add(rowStyleClass);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
     }
 
     private void refreshCategoryCard() {

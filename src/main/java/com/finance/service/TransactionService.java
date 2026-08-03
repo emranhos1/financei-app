@@ -231,6 +231,11 @@ public class TransactionService {
         return transactionRepository.sumIncomeByCategory(userId, categoryId, startDate, endDate);
     }
 
+    public BigDecimal getExpenseByAccountIds(Long userId, List<Long> accountIds, LocalDate startDate, LocalDate endDate) {
+        if (accountIds == null || accountIds.isEmpty()) return BigDecimal.ZERO;
+        return transactionRepository.sumExpenseByFromAccountIdsAndDateRange(userId, accountIds, startDate, endDate);
+    }
+
     public BigDecimal getNetIncome(Long userId, LocalDate startDate, LocalDate endDate) {
         return getTotalIncome(userId, startDate, endDate).subtract(getTotalExpense(userId, startDate, endDate));
     }

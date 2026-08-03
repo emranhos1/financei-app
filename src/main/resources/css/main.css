@@ -298,6 +298,21 @@
     -fx-text-fill: #355C50;
 }
 
+/* -- monthly expense mini-table (row 5) -- */
+.dash-monthly-row {
+    -fx-padding: 2 4;
+}
+.dash-monthly-row-total {
+    -fx-background-color: #EAF3F0;
+    -fx-background-radius: 4;
+    -fx-padding: 3 6;
+}
+.dash-monthly-row-avg {
+    -fx-background-color: #E3EEFB;
+    -fx-background-radius: 4;
+    -fx-padding: 3 6;
+}
+
 /* -- recent transactions -- */
 .dash-tx-row {
     -fx-padding: 3 0 3 0;
