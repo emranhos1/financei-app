@@ -4,17 +4,19 @@ import com.finance.context.SessionContext;
 import com.finance.entity.Account;
 import com.finance.entity.AccountType;
 import com.finance.entity.Category;
+import com.finance.entity.MonthlyExpenseOverride;
 import com.finance.entity.Transaction;
 import com.finance.service.AccountService;
 import com.finance.service.AccountTypeService;
 import com.finance.service.CategoryService;
+import com.finance.service.MonthlyExpenseOverrideService;
 import com.finance.service.TransactionService;
-import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.control.ComboBox;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -23,9 +25,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
-import javafx.scene.shape.Polyline;
 import javafx.scene.shape.StrokeLineCap;
-import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 
@@ -48,11 +48,11 @@ public class DashboardHomeController {
     private final AccountTypeService accountTypeService;
     private final TransactionService transactionService;
     private final CategoryService categoryService;
+    private final MonthlyExpenseOverrideService monthlyExpenseOverrideService;
 
     private static final DateTimeFormatter TX_DATE_FMT = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH);
-    private static final DateTimeFormatter GOAL_DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
-    private static final DateTimeFormatter WEEKDAY_FMT = DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH);
+    private static final DateTimeFormatter FULL_MONTH_FMT = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
     private static final String[] BADGE_PALETTE = {"badge-teal", "badge-gold", "badge-blue", "badge-purple", "badge-rose", "badge-mint"};
 
     @FXML private HBox balanceCardsBox;
@@ -62,97 +62,32 @@ public class DashboardHomeController {
 
     @FXML private VBox recentTxBox;
 
-    @FXML private Label weeklyNetLabel;
-    @FXML private HBox weeklyChartBox;
-
     @FXML private StackPane expenseRingStack;
     @FXML private Label expenseRingLabel;
     @FXML private Label topExpenseLabel;
 
-    @FXML private Label trendAmountLabel;
-    @FXML private StackPane trendChartPane;
-    @FXML private HBox trendMonthLabelsBox;
-
-    @FXML private FlowPane goalCardsBox;
-
     @FXML private VBox cashMonthlyExpenseBox;
     @FXML private VBox bankMonthlyExpenseBox;
 
-    @FXML private Label todayIncomeLabel;
-    @FXML private Label todayExpenseLabel;
-    @FXML private Label monthIncomeLabel;
-    @FXML private Label monthExpenseLabel;
-    @FXML private Label yearIncomeLabel;
-    @FXML private Label yearExpenseLabel;
-
-    @FXML private ComboBox<Category> categoryComboBox;
-    @FXML private Label catTodayIncLabel;
-    @FXML private Label catTodayExpLabel;
-    @FXML private Label catMonthIncLabel;
-    @FXML private Label catMonthExpLabel;
-    @FXML private Label catYearIncLabel;
-    @FXML private Label catYearExpLabel;
-
-    private List<BigDecimal> trendValuesCache = new ArrayList<>();
-    private List<String> trendLabelsCache = new ArrayList<>();
-
     @FXML
     public void initialize() {
-        setupCategoryComboBox();
-        trendChartPane.widthProperty().addListener((obs, o, n) -> drawTrendChart());
         refreshDashboard();
-    }
-
-    private static final Category ALL_CATEGORIES_OPTION = Category.builder().id(null).name("All Categories").build();
-
-    private void setupCategoryComboBox() {
-        categoryComboBox.setConverter(new StringConverter<Category>() {
-            public String toString(Category c) { return c == null ? "" : c.getName() + (c.getId() == null ? "" : " (" + c.getType().name() + ")"); }
-            public Category fromString(String s) { return null; }
-        });
-        List<Category> items = new ArrayList<>();
-        items.add(ALL_CATEGORIES_OPTION);
-        items.addAll(categoryService.getCategoriesByUserId(sessionContext.getCurrentUserId()));
-        categoryComboBox.setItems(FXCollections.observableArrayList(items));
-        categoryComboBox.setValue(ALL_CATEGORIES_OPTION);
-        categoryComboBox.setOnAction(e -> refreshCategoryCard());
     }
 
     public void refreshDashboard() {
         Long userId = sessionContext.getCurrentUserId();
         LocalDate today = LocalDate.now();
         LocalDate monthStart = today.withDayOfMonth(1);
-        LocalDate yearStart = today.withDayOfYear(1);
 
         List<Account> accounts = accountService.getAccountsByUserId(userId);
 
         buildBalanceCards(userId);
         buildNetWorthAndChips(accounts);
         buildRecentTransactions(userId, accounts);
-        buildWeeklyChart(userId, today);
         buildExpenseRing(userId, monthStart, today);
         buildTopExpense(userId, monthStart, today);
-        buildNetWorthTrend(userId, today);
-        buildGoalCards(accounts);
         buildMonthlyExpenseByType(cashMonthlyExpenseBox, userId, accounts, "CASH");
         buildMonthlyExpenseByType(bankMonthlyExpenseBox, userId, accounts, "BANK");
-
-        BigDecimal tInc = transactionService.getTotalIncome(userId, today, today);
-        BigDecimal tExp = transactionService.getTotalExpense(userId, today, today);
-        todayIncomeLabel.setText(fmt(tInc));
-        todayExpenseLabel.setText(fmt(tExp));
-
-        BigDecimal mInc = transactionService.getTotalIncome(userId, monthStart, today);
-        BigDecimal mExp = transactionService.getTotalExpense(userId, monthStart, today);
-        monthIncomeLabel.setText(fmt(mInc));
-        monthExpenseLabel.setText(fmt(mExp));
-
-        BigDecimal yInc = transactionService.getTotalIncome(userId, yearStart, today);
-        BigDecimal yExp = transactionService.getTotalExpense(userId, yearStart, today);
-        yearIncomeLabel.setText(fmt(yInc));
-        yearExpenseLabel.setText(fmt(yExp));
-
-        refreshCategoryCard();
     }
 
     private void buildBalanceCards(Long userId) {
@@ -292,62 +227,6 @@ public class DashboardHomeController {
         return row;
     }
 
-    private void buildWeeklyChart(Long userId, LocalDate today) {
-        List<LocalDate> days = new ArrayList<>();
-        List<BigDecimal> incomes = new ArrayList<>();
-        List<BigDecimal> expenses = new ArrayList<>();
-        BigDecimal weekNet = BigDecimal.ZERO;
-        double max = 0.01;
-
-        for (int i = 6; i >= 0; i--) {
-            LocalDate d = today.minusDays(i);
-            BigDecimal inc = transactionService.getTotalIncome(userId, d, d);
-            BigDecimal exp = transactionService.getTotalExpense(userId, d, d);
-            days.add(d); incomes.add(inc); expenses.add(exp);
-            weekNet = weekNet.add(inc).subtract(exp);
-            max = Math.max(max, Math.max(inc.doubleValue(), exp.doubleValue()));
-        }
-        weeklyNetLabel.setText(fmt(weekNet) + " net");
-
-        weeklyChartBox.getChildren().clear();
-        double maxBarHeight = 48;
-        for (int i = 0; i < days.size(); i++) {
-            double incH = Math.max(2, incomes.get(i).doubleValue() / max * maxBarHeight);
-            double expH = Math.max(2, expenses.get(i).doubleValue() / max * maxBarHeight);
-            if (incomes.get(i).compareTo(BigDecimal.ZERO) == 0) incH = 0;
-            if (expenses.get(i).compareTo(BigDecimal.ZERO) == 0) expH = 0;
-
-            Region incBar = new Region();
-            incBar.getStyleClass().add("dash-bar-income");
-            incBar.setPrefSize(7, incH);
-            incBar.setMinHeight(incH);
-            incBar.setMaxHeight(incH);
-
-            Region expBar = new Region();
-            expBar.getStyleClass().add("dash-bar-expense");
-            expBar.setPrefSize(7, expH);
-            expBar.setMinHeight(expH);
-            expBar.setMaxHeight(expH);
-
-            HBox bars = new HBox(3, incBar, expBar);
-            bars.setAlignment(Pos.BOTTOM_CENTER);
-            bars.setPrefHeight(maxBarHeight);
-
-            Tooltip dayTip = new Tooltip(days.get(i).format(GOAL_DATE_FMT)
-                    + "\nIncome: " + fmt(incomes.get(i))
-                    + "\nExpense: " + fmt(expenses.get(i)));
-            dayTip.setShowDelay(javafx.util.Duration.millis(100));
-            Tooltip.install(bars, dayTip);
-
-            Label dayLabel = new Label(days.get(i).format(WEEKDAY_FMT));
-            dayLabel.getStyleClass().add("dash-day-label");
-
-            VBox dayBox = new VBox(4, bars, dayLabel);
-            dayBox.setAlignment(Pos.BOTTOM_CENTER);
-            weeklyChartBox.getChildren().add(dayBox);
-        }
-    }
-
     private void buildExpenseRing(Long userId, LocalDate monthStart, LocalDate today) {
         BigDecimal mInc = transactionService.getTotalIncome(userId, monthStart, today);
         BigDecimal mExp = transactionService.getTotalExpense(userId, monthStart, today);
@@ -397,176 +276,20 @@ public class DashboardHomeController {
         }
     }
 
-    private void buildNetWorthTrend(Long userId, LocalDate today) {
-        BigDecimal currentNetWorth = accountService.getNetWorth(userId);
-        YearMonth currentYm = YearMonth.from(today);
-
-        BigDecimal[] vals = new BigDecimal[6];
-        YearMonth cursor = currentYm;
-        BigDecimal runningValue = currentNetWorth;
-        vals[5] = runningValue;
-        for (int idx = 4; idx >= 0; idx--) {
-            BigDecimal change = monthlyNetChange(userId, cursor);
-            runningValue = runningValue.subtract(change);
-            vals[idx] = runningValue;
-            cursor = cursor.minusMonths(1);
-        }
-
-        trendValuesCache = new ArrayList<>();
-        trendLabelsCache = new ArrayList<>();
-        for (int i = 0; i < 6; i++) {
-            trendValuesCache.add(vals[i]);
-            trendLabelsCache.add(currentYm.minusMonths(5 - i).format(MONTH_FMT));
-        }
-
-        trendAmountLabel.setText(fmt(currentNetWorth));
-
-        trendMonthLabelsBox.getChildren().clear();
-        for (String label : trendLabelsCache) {
-            Label l = new Label(label);
-            l.getStyleClass().add("dash-day-label");
-            HBox.setHgrow(l, Priority.ALWAYS);
-            l.setMaxWidth(Double.MAX_VALUE);
-            l.setAlignment(Pos.CENTER);
-            trendMonthLabelsBox.getChildren().add(l);
-        }
-
-        drawTrendChart();
-    }
-
-    private BigDecimal monthlyNetChange(Long userId, YearMonth m) {
-        BigDecimal inc = transactionService.getTotalIncome(userId, m.atDay(1), m.atEndOfMonth());
-        BigDecimal exp = transactionService.getTotalExpense(userId, m.atDay(1), m.atEndOfMonth());
-        return inc.subtract(exp);
-    }
-
-    private void drawTrendChart() {
-        if (trendValuesCache.isEmpty()) return;
-        double width = trendChartPane.getWidth();
-        if (width <= 0) width = 400;
-        double height = 34;
-
-        double min = trendValuesCache.stream().mapToDouble(BigDecimal::doubleValue).min().orElse(0);
-        double max = trendValuesCache.stream().mapToDouble(BigDecimal::doubleValue).max().orElse(1);
-        if (max - min < 0.01) { max = max + 1; min = min - 1; }
-
-        int n = trendValuesCache.size();
-        double padX = 4, padY = 6;
-        Polyline line = new Polyline();
-        line.getStyleClass().add("dash-trend-line");
-        double lastX = 0, lastY = 0;
-        for (int i = 0; i < n; i++) {
-            double x = padX + (width - 2 * padX) * i / (n - 1);
-            double v = trendValuesCache.get(i).doubleValue();
-            double y = padY + (height - 2 * padY) * (1 - (v - min) / (max - min));
-            line.getPoints().addAll(x, y);
-            lastX = x; lastY = y;
-        }
-
-        Circle dot = new Circle(lastX, lastY, 3);
-        dot.getStyleClass().add("dash-trend-dot");
-
-        trendChartPane.getChildren().clear();
-        javafx.scene.layout.Pane freeform = new javafx.scene.layout.Pane(line, dot);
-        freeform.setPrefSize(width, height);
-        trendChartPane.getChildren().add(freeform);
-    }
-
-    /** Goal accounts = any account the user has explicitly marked "Show as a goal card" (via the Accounts page,
-     *  or the add/remove controls below). This is fully manual — nothing is added automatically. */
-    private void buildGoalCards(List<Account> accounts) {
-        goalCardsBox.getChildren().clear();
-        List<Account> shown = new ArrayList<>();
-        List<Account> hidden = new ArrayList<>();
-        for (Account a : accounts) {
-            if (Boolean.TRUE.equals(a.getShowInGoals())) shown.add(a); else hidden.add(a);
-        }
-
-        if (shown.isEmpty()) {
-            Label empty = new Label("No goal cards yet. Use \"Add account\" below to pin any account here.");
-            empty.getStyleClass().add("dash-section-hint");
-            empty.setWrapText(true);
-            empty.setMaxWidth(160);
-            empty.setPrefWidth(160);
-            goalCardsBox.getChildren().add(empty);
-        }
-
-        for (Account a : shown) {
-            goalCardsBox.getChildren().add(buildGoalCard(a));
-        }
-
-        javafx.scene.control.Button addBtn = new javafx.scene.control.Button("+  Add account");
-        addBtn.getStyleClass().add("dash-add-goal-btn");
-        addBtn.setDisable(hidden.isEmpty());
-        addBtn.setOnAction(e -> {
-            if (hidden.isEmpty()) return;
-            Map<String, Account> options = new LinkedHashMap<>();
-            for (Account h : hidden) options.put(h.getName() + "  (" + h.getAccountType().getName() + ")", h);
-            List<String> labels = new ArrayList<>(options.keySet());
-            javafx.scene.control.ChoiceDialog<String> dialog = new javafx.scene.control.ChoiceDialog<>(labels.get(0), labels);
-            dialog.setTitle("Add a goal card");
-            dialog.setHeaderText(null);
-            dialog.setContentText("Choose an account to pin here:");
-            dialog.showAndWait().ifPresent(chosenLabel -> {
-                Account chosen = options.get(chosenLabel);
-                accountService.setShowInGoals(chosen.getId(), true);
-                refreshDashboard();
-            });
-        });
-        goalCardsBox.getChildren().add(addBtn);
-    }
-
-    private VBox buildGoalCard(Account a) {
-        Label title = new Label(a.getName());
-        title.getStyleClass().add("dash-goal-title");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        javafx.scene.control.Button removeBtn = new javafx.scene.control.Button("\u2715");
-        removeBtn.getStyleClass().add("dash-goal-remove-btn");
-        removeBtn.setOnAction(e -> {
-            accountService.setShowInGoals(a.getId(), false);
-            refreshDashboard();
-        });
-        HBox header = new HBox(title, spacer, removeBtn);
-        header.setAlignment(Pos.CENTER_LEFT);
-
-        Label amount = new Label(fmt(a.getBalance()));
-        amount.getStyleClass().add("dash-goal-amount");
-
-        VBox card = new VBox(6, header, amount);
-
-        if (a.getMaturityDate() != null) {
-            Label matures = new Label("Matures " + a.getMaturityDate().format(GOAL_DATE_FMT));
-            matures.getStyleClass().add("dash-goal-sub");
-            card.getChildren().add(1, matures);
-
-            double fraction = 0;
-            if (a.getCreatedAt() != null) {
-                LocalDate start = a.getCreatedAt().toLocalDate();
-                LocalDate end = a.getMaturityDate();
-                long totalDays = java.time.temporal.ChronoUnit.DAYS.between(start, end);
-                long elapsedDays = java.time.temporal.ChronoUnit.DAYS.between(start, LocalDate.now());
-                if (totalDays > 0) fraction = Math.max(0, Math.min(1, elapsedDays / (double) totalDays));
-                else fraction = 1;
-            }
-            ProgressBar progressBar = new ProgressBar(fraction);
-            progressBar.getStyleClass().add("dash-goal-progress");
-            progressBar.setMaxWidth(Double.MAX_VALUE);
-            card.getChildren().add(progressBar);
-        }
-
-        if (a.getInstallmentAmount() != null) {
-            Label installment = new Label("Installment " + fmt(a.getInstallmentAmount()) + "/month");
-            installment.getStyleClass().add("dash-goal-sub");
-            card.getChildren().add(installment);
-        }
-        card.getStyleClass().add("dash-goal-card");
-        card.setPrefWidth(140);
-        return card;
-    }
-
-    /** Shows the current year's Jan–Dec expense total for every account of the given account type
-     *  (e.g. "CASH" or "BANK"), plus a Total and a 12-month Average row. */
+    /**
+     * Shows the current year's Jan-Dec expense total for every account of the given account type
+     * (e.g. "CASH" or "BANK"), read from the {@code monthly_expense_overrides} table, plus a
+     * Total and a 12-month Average row.
+     * <p>
+     * Behavior:
+     * - The CURRENT month is recalculated live from EXPENSE transactions (paid from an account of
+     *   this type) every time the dashboard loads, and that figure is auto-saved into the table -
+     *   unless the user has manually corrected this month's figure, in which case the manual
+     *   value wins and is left untouched.
+     * - Every OTHER month (past or future) is never recalculated - it simply shows whatever is
+     *   saved in the table (0 if nothing was ever saved for it). This is what makes a month
+     *   "freeze" once it's no longer current: only a manual ✎ edit can change it after that.
+     */
     private void buildMonthlyExpenseByType(VBox container, Long userId, List<Account> accounts, String typeName) {
         container.getChildren().clear();
 
@@ -575,69 +298,105 @@ public class DashboardHomeController {
             if (typeName.equalsIgnoreCase(a.getAccountType().getName())) accountIds.add(a.getId());
         }
 
-        int year = LocalDate.now().getYear();
+        LocalDate today = LocalDate.now();
+        int year = today.getYear();
+        int currentMonth = today.getMonthValue();
+
+        Map<Integer, MonthlyExpenseOverride> records =
+                monthlyExpenseOverrideService.getRecordsForYear(userId, typeName, year);
+
         BigDecimal total = BigDecimal.ZERO;
         for (int month = 1; month <= 12; month++) {
             YearMonth ym = YearMonth.of(year, month);
-            BigDecimal amount = transactionService.getExpenseByAccountIds(userId, accountIds, ym.atDay(1), ym.atEndOfMonth());
+            MonthlyExpenseOverride existing = records.get(month);
+            BigDecimal amount;
+            boolean isManual = existing != null && Boolean.TRUE.equals(existing.getIsManual());
+
+            if (month == currentMonth && !isManual) {
+                BigDecimal calculated = transactionService.getExpenseByAccountIds(userId, accountIds, ym.atDay(1), ym.atEndOfMonth());
+                monthlyExpenseOverrideService.autoSaveCurrentMonth(userId, typeName, year, month, calculated);
+                amount = calculated;
+            } else {
+                amount = existing != null ? existing.getAmount() : BigDecimal.ZERO;
+            }
+
             total = total.add(amount);
-            container.getChildren().add(buildMonthlyExpenseRow(
-                    ym.format(MONTH_FMT).toUpperCase(Locale.ENGLISH), fmt(amount), "dash-monthly-row"));
+            container.getChildren().add(buildMonthlyExpenseRow(ym, typeName, amount, isManual, userId));
         }
 
         BigDecimal avg = total.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
-        container.getChildren().add(buildMonthlyExpenseRow("Total", fmt(total), "dash-monthly-row-total"));
-        container.getChildren().add(buildMonthlyExpenseRow("AVG", fmt(avg), "dash-monthly-row-avg"));
+        container.getChildren().add(buildSummaryRow("Total", fmt(total), "dash-monthly-row-total"));
+        container.getChildren().add(buildSummaryRow("AVG", fmt(avg), "dash-monthly-row-avg"));
     }
 
-    private HBox buildMonthlyExpenseRow(String label, String value, String rowStyleClass) {
-        Label nameLabel = new Label(label);
+    private HBox buildMonthlyExpenseRow(YearMonth ym, String typeName, BigDecimal amount, boolean isSaved, Long userId) {
+        Label nameLabel = new Label(ym.format(MONTH_FMT).toUpperCase(Locale.ENGLISH));
         nameLabel.getStyleClass().add("dash-card-label");
+        nameLabel.setPrefWidth(40);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label valueLabel = new Label(fmt(amount));
+        valueLabel.getStyleClass().add(isSaved ? "dash-monthly-value-saved" : "dash-card-label");
+        if (isSaved) {
+            Tooltip.install(valueLabel, new Tooltip("Manually saved value — overrides the calculated total"));
+        }
+
+        Button editBtn = new Button("✎");
+        editBtn.getStyleClass().add("dash-monthly-edit-btn");
+        Tooltip.install(editBtn, new Tooltip("Manually save this month's actual " + typeName + " expense"));
+        editBtn.setOnAction(e -> handleEditMonthlyExpense(ym, typeName, amount, userId));
+
+        HBox row = new HBox(6, nameLabel, spacer, valueLabel, editBtn);
+        row.getStyleClass().add("dash-monthly-row");
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private void handleEditMonthlyExpense(YearMonth ym, String typeName, BigDecimal currentAmount, Long userId) {
+        TextInputDialog dialog = new TextInputDialog(currentAmount.setScale(2, RoundingMode.HALF_UP).toPlainString());
+        dialog.setTitle("Save month's actual expense");
+        dialog.setHeaderText(null);
+        dialog.setContentText(ym.format(FULL_MONTH_FMT) + " — " + typeName + " expense (৳):");
+        dialog.showAndWait().ifPresent(input -> {
+            BigDecimal parsed;
+            try {
+                parsed = new BigDecimal(input.trim());
+            } catch (NumberFormatException ex) {
+                showValidationError("Please enter a valid amount (e.g. 47780 or 47780.00).");
+                return;
+            }
+            if (parsed.compareTo(BigDecimal.ZERO) < 0) {
+                showValidationError("Amount cannot be negative.");
+                return;
+            }
+            monthlyExpenseOverrideService.saveManualOverride(userId, typeName, ym.getYear(), ym.getMonthValue(), parsed);
+            refreshDashboard();
+        });
+    }
+
+    private void showValidationError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR, message);
+        alert.setTitle("Invalid amount");
+        alert.setHeaderText(null);
+        alert.showAndWait();
+    }
+
+    private HBox buildSummaryRow(String label, String value, String rowStyleClass) {
+        Label nameLabel = new Label(label);
+        nameLabel.getStyleClass().add("dash-card-title");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Label valueLabel = new Label(value);
-        valueLabel.getStyleClass().add("dash-card-label");
+        valueLabel.getStyleClass().add("dash-card-title");
 
         HBox row = new HBox(nameLabel, spacer, valueLabel);
         row.getStyleClass().add(rowStyleClass);
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
-    }
-
-    private void refreshCategoryCard() {
-        Category cat = categoryComboBox.getValue();
-        if (cat == null) { clearCategoryLabels(); return; }
-        Long userId = sessionContext.getCurrentUserId();
-        LocalDate today = LocalDate.now();
-        LocalDate monthStart = today.withDayOfMonth(1);
-        LocalDate yearStart = today.withDayOfYear(1);
-
-        if (cat.getId() == null) {
-            catTodayIncLabel.setText(fmt(transactionService.getTotalIncome(userId, today, today)));
-            catTodayExpLabel.setText(fmt(transactionService.getTotalExpense(userId, today, today)));
-            catMonthIncLabel.setText(fmt(transactionService.getTotalIncome(userId, monthStart, today)));
-            catMonthExpLabel.setText(fmt(transactionService.getTotalExpense(userId, monthStart, today)));
-            catYearIncLabel.setText(fmt(transactionService.getTotalIncome(userId, yearStart, today)));
-            catYearExpLabel.setText(fmt(transactionService.getTotalExpense(userId, yearStart, today)));
-            return;
-        }
-
-        Long catId = cat.getId();
-        catTodayIncLabel.setText(fmt(transactionService.getIncomeByCategory(userId, catId, today, today)));
-        catTodayExpLabel.setText(fmt(transactionService.getExpenseByCategory(userId, catId, today, today)));
-        catMonthIncLabel.setText(fmt(transactionService.getIncomeByCategory(userId, catId, monthStart, today)));
-        catMonthExpLabel.setText(fmt(transactionService.getExpenseByCategory(userId, catId, monthStart, today)));
-        catYearIncLabel.setText(fmt(transactionService.getIncomeByCategory(userId, catId, yearStart, today)));
-        catYearExpLabel.setText(fmt(transactionService.getExpenseByCategory(userId, catId, yearStart, today)));
-    }
-
-    private void clearCategoryLabels() {
-        String z = "৳ 0.00";
-        catTodayIncLabel.setText(z); catTodayExpLabel.setText(z);
-        catMonthIncLabel.setText(z); catMonthExpLabel.setText(z);
-        catYearIncLabel.setText(z); catYearExpLabel.setText(z);
     }
 
     private String initials(String name) {

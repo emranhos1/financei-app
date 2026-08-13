@@ -201,6 +201,9 @@ public class TransactionController {
         LocalDate selectedDate = dateFilter.getValue();
 
         filteredTransactions.setPredicate(tx -> {
+            if (tx.getType() == Transaction.TransactionType.TRANSFER) {
+                return false;
+            }
             if (selectedCategory != null && selectedCategory.getId() != null
                     && !selectedCategory.getId().equals(tx.getCategoryId())) {
                 return false;

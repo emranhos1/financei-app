@@ -236,6 +236,11 @@ public class TransactionService {
         return transactionRepository.sumExpenseByFromAccountIdsAndDateRange(userId, accountIds, startDate, endDate);
     }
 
+    /** Earliest transaction date this user has ever recorded, or null if they have none. */
+    public LocalDate getEarliestTransactionDate(Long userId) {
+        return transactionRepository.findEarliestDateByUserId(userId);
+    }
+
     public BigDecimal getNetIncome(Long userId, LocalDate startDate, LocalDate endDate) {
         return getTotalIncome(userId, startDate, endDate).subtract(getTotalExpense(userId, startDate, endDate));
     }

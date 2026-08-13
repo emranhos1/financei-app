@@ -19,6 +19,7 @@ import java.sql.SQLException;
 public class DatabaseInitializationService {
     private final DataSource dataSource;
     private final UserService userService;
+    private final MonthlyExpenseOverrideService monthlyExpenseOverrideService;
 
     @Value("${admin.username}")
     private String adminUsername;
@@ -55,6 +56,12 @@ public class DatabaseInitializationService {
         } catch (Exception e) {
             log.error("Database initialization failed", e);
             throw new RuntimeException("Failed to initialize database", e);
+        }
+
+        try {
+            monthlyExpenseOverrideService.backfillHistoricalMonths();
+        } catch (Exception e) {
+            log.error("Monthly expense backfill failed - dashboard will still work, only historical months may show 0 until manually corrected", e);
         }
     }
 }

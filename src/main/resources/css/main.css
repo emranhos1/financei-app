@@ -312,6 +312,22 @@
     -fx-background-radius: 4;
     -fx-padding: 3 6;
 }
+.dash-monthly-value-saved {
+    -fx-font-size: 11;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1D5FA8;
+}
+.dash-monthly-edit-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0 2;
+    -fx-font-size: 11;
+    -fx-text-fill: #8AA69C;
+    -fx-cursor: hand;
+}
+.dash-monthly-edit-btn:hover {
+    -fx-text-fill: #1B5446;
+}
 
 /* -- recent transactions -- */
 .dash-tx-row {
@@ -381,47 +397,3 @@
 .dash-trend-line { -fx-stroke: #2E9E5B; -fx-stroke-width: 2; -fx-fill: transparent; }
 .dash-trend-dot  { -fx-fill: #2E9E5B; }
 
-/* -- goal accounts -- */
-.dash-goal-card {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #E4ECE9;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
-    -fx-padding: 6;
-}
-.dash-goal-title  { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: #26362F; }
-.dash-goal-sub    { -fx-font-size: 9;  -fx-text-fill: #8AA69C; }
-.dash-goal-amount { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #1B5446; }
-
-.dash-goal-remove-btn {
-    -fx-background-color: transparent;
-    -fx-text-fill: #B0BEC0;
-    -fx-font-size: 10;
-    -fx-padding: 1 3;
-    -fx-cursor: hand;
-    -fx-min-width: 16; -fx-min-height: 16;
-}
-.dash-goal-remove-btn:hover {
-    -fx-text-fill: #C0392B;
-    -fx-background-color: #FBE7E9;
-    -fx-background-radius: 8;
-}
-
-.dash-goal-progress > .track { -fx-background-color: #EEF3F1; -fx-background-radius: 4; }
-.dash-goal-progress > .bar   { -fx-background-color: #D4AF37; -fx-background-radius: 4; -fx-padding: 3; }
-
-.dash-add-goal-btn {
-    -fx-background-color: transparent;
-    -fx-border-color: #B7D9CE;
-    -fx-border-style: dashed;
-    -fx-border-width: 1.5;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-    -fx-text-fill: #4F6F66;
-    -fx-cursor: hand;
-    -fx-font-size: 10;
-    -fx-padding: 4 8;
-}
-.dash-add-goal-btn:hover {
-    -fx-background-color: #F2F7F5;
-}

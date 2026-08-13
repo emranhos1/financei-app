@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -57,104 +54,7 @@
         </VBox>
     </GridPane>
 
-    <!-- Row 3: Income vs expense last 7 days (50%) | Net worth trend (50%) -->
-    <GridPane hgap="12">
-        <columnConstraints>
-            <ColumnConstraints percentWidth="50"/>
-            <ColumnConstraints percentWidth="50"/>
-        </columnConstraints>
-
-        <VBox styleClass="dash-summary-card" spacing="3" GridPane.columnIndex="0" GridPane.rowIndex="0">
-            <Label text="Income vs expense — last 7 days" styleClass="dash-section-title"/>
-            <HBox spacing="14">
-                <Label fx:id="weeklyNetLabel" text="৳ 0.00 net" styleClass="dash-trend-amount"/>
-                <Region HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                <HBox spacing="5" alignment="CENTER_LEFT">
-                    <Region styleClass="dash-legend-dot-income"/>
-                    <Label text="Income" styleClass="dash-legend-label"/>
-                </HBox>
-                <HBox spacing="5" alignment="CENTER_LEFT">
-                    <Region styleClass="dash-legend-dot-expense"/>
-                    <Label text="Expense" styleClass="dash-legend-label"/>
-                </HBox>
-            </HBox>
-            <HBox fx:id="weeklyChartBox" spacing="8" alignment="BOTTOM_CENTER" prefHeight="65">
-                <padding><Insets top="4"/></padding>
-            </HBox>
-        </VBox>
-
-        <VBox styleClass="dash-summary-card" spacing="3" GridPane.columnIndex="1" GridPane.rowIndex="0">
-            <HBox>
-                <Label text="Net worth trend" styleClass="dash-section-title" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                <Label fx:id="trendAmountLabel" text="৳ 0.00" styleClass="dash-trend-amount"/>
-            </HBox>
-            <StackPane fx:id="trendChartPane" prefHeight="40" minHeight="40"/>
-            <HBox fx:id="trendMonthLabelsBox" spacing="4"/>
-        </VBox>
-    </GridPane>
-
-    <!-- Row 4: Today / Month / Year (33%) | Goal accounts (34%) | Category Breakdown (33%) -->
-    <GridPane hgap="12">
-        <columnConstraints>
-            <ColumnConstraints percentWidth="33"/>
-            <ColumnConstraints percentWidth="34"/>
-            <ColumnConstraints percentWidth="33"/>
-        </columnConstraints>
-
-        <VBox styleClass="dash-summary-card" spacing="4" GridPane.columnIndex="0" GridPane.rowIndex="0">
-            <Label text="Today / Month / Year" styleClass="dash-section-title"/>
-            <GridPane hgap="14" vgap="3">
-                <Label text="" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                <Label text="Income" GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="dash-table-head"/>
-                <Label text="Expense" GridPane.columnIndex="2" GridPane.rowIndex="0" styleClass="dash-table-head"/>
-
-                <Label text="Today" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="dash-card-label"/>
-                <Label fx:id="todayIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                <Label fx:id="todayExpenseLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-
-                <Label text="Month" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="dash-card-label"/>
-                <Label fx:id="monthIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                <Label fx:id="monthExpenseLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-
-                <Label text="Year" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="dash-card-label"/>
-                <Label fx:id="yearIncomeLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                <Label fx:id="yearExpenseLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
-            </GridPane>
-        </VBox>
-
-        <VBox styleClass="dash-summary-card" spacing="4" GridPane.columnIndex="1" GridPane.rowIndex="0">
-            <HBox>
-                <Label text="Goal accounts" styleClass="dash-section-title" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-            </HBox>
-            <Label text="Shows any account with a maturity date" styleClass="dash-section-hint" wrapText="true"/>
-            <FlowPane fx:id="goalCardsBox" hgap="8" vgap="8"/>
-        </VBox>
-
-        <VBox styleClass="dash-summary-card" spacing="4" GridPane.columnIndex="2" GridPane.rowIndex="0">
-            <Label text="Category Breakdown" styleClass="dash-card-title"/>
-            <ComboBox fx:id="categoryComboBox" prefWidth="220" promptText="— Select Category —"/>
-
-            <GridPane hgap="14" vgap="3">
-                <Label text=""           GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                <Label text="Income"     GridPane.columnIndex="1" GridPane.rowIndex="0" styleClass="dash-card-title"/>
-                <Label text="Expense"    GridPane.columnIndex="2" GridPane.rowIndex="0" styleClass="dash-card-title"/>
-
-                <Label text="Today"      GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="dash-card-label"/>
-                <Label fx:id="catTodayIncLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                <Label fx:id="catTodayExpLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-
-                <Label text="This Month" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="dash-card-label"/>
-                <Label fx:id="catMonthIncLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                <Label fx:id="catMonthExpLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-
-                <Label text="This Year"  GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="dash-card-label"/>
-                <Label fx:id="catYearIncLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
-                <Label fx:id="catYearExpLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
-            </GridPane>
-        </VBox>
-    </GridPane>
-
-    <!-- Row 5: Monthly Expense — Cash (50%) | Monthly Expense — Bank (50%) -->
+    <!-- Row 3: Monthly Expense — Cash (50%) | Monthly Expense — Bank (50%) -->
     <GridPane hgap="12">
         <columnConstraints>
             <ColumnConstraints percentWidth="50"/>
@@ -163,11 +63,15 @@
 
         <VBox styleClass="dash-summary-card" spacing="4" GridPane.columnIndex="0" GridPane.rowIndex="0">
             <Label text="Monthly Expense — Cash" styleClass="dash-section-title"/>
+            <Label text="Sum of EXPENSE transactions paid from your Cash-type accounts, per month. Income and Transfers are not counted. Click ✎ next to a month to manually save/correct its actual figure — a saved value overrides the calculated one."
+                   styleClass="dash-section-hint" wrapText="true"/>
             <VBox fx:id="cashMonthlyExpenseBox" spacing="1"/>
         </VBox>
 
         <VBox styleClass="dash-summary-card" spacing="4" GridPane.columnIndex="1" GridPane.rowIndex="0">
             <Label text="Monthly Expense — Bank" styleClass="dash-section-title"/>
+            <Label text="Sum of EXPENSE transactions paid from your Bank-type accounts, per month. Income and Transfers are not counted. Click ✎ next to a month to manually save/correct its actual figure — a saved value overrides the calculated one."
+                   styleClass="dash-section-hint" wrapText="true"/>
             <VBox fx:id="bankMonthlyExpenseBox" spacing="1"/>
         </VBox>
     </GridPane>

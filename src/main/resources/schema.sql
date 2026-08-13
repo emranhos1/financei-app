@@ -103,6 +103,30 @@ PREPARE stmt FROM @alter_stmt;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+CREATE TABLE IF NOT EXISTS monthly_expense_overrides (
+                                                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                                          user_id BIGINT NOT NULL,
+                                                          account_type_name VARCHAR(100) NOT NULL,
+    expense_year INT NOT NULL,
+    expense_month INT NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_type_year_month (user_id, account_type_name, expense_year, expense_month)
+    );
+
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'monthly_expense_overrides' AND COLUMN_NAME = 'is_manual'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE monthly_expense_overrides ADD COLUMN is_manual BOOLEAN NOT NULL DEFAULT FALSE',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 CREATE TABLE IF NOT EXISTS account_logs (
                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                             account_id BIGINT NOT NULL,
