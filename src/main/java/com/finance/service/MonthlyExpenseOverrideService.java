@@ -92,8 +92,8 @@ public class MonthlyExpenseOverrideService {
                             .isPresent();
                     if (exists) continue;
 
-                    BigDecimal amount = transactionService.getExpenseByAccountIds(
-                            user.getId(), accountIds, ym.atDay(1), ym.atEndOfMonth());
+                    BigDecimal amount = transactionService.getEffectiveExpense(
+                            user.getId(), accounts, typeName, ym.atDay(1), ym.atEndOfMonth());
 
                     MonthlyExpenseOverride record = MonthlyExpenseOverride.builder()
                             .userId(user.getId())

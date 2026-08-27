@@ -146,8 +146,10 @@ public class TransferController {
     }
 
     private void loadTransfers() {
-        transfersTable.setItems(FXCollections.observableArrayList(
-                transactionService.getTransactionsByType(sessionContext.getCurrentUserId(), Transaction.TransactionType.TRANSFER)));
+        List<Transaction> transfers = transactionService.getTransactionsByType(
+                sessionContext.getCurrentUserId(), Transaction.TransactionType.TRANSFER);
+        transfers.sort((a, b) -> b.getDate().compareTo(a.getDate()));
+        transfersTable.setItems(FXCollections.observableArrayList(transfers));
     }
 
     @FXML

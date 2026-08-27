@@ -41,16 +41,18 @@
         </VBox>
 
         <VBox styleClass="dash-summary-card" spacing="3" alignment="CENTER" GridPane.columnIndex="2" GridPane.rowIndex="0">
+            <Label text="Expense % of Income" styleClass="dash-ring-sub" wrapText="true"
+                   alignment="CENTER" textAlignment="CENTER" maxWidth="140"/>
             <StackPane fx:id="expenseRingStack" prefWidth="54" prefHeight="54" maxWidth="54" maxHeight="54">
                 <Label fx:id="expenseRingLabel" text="0%" styleClass="dash-ring-label"/>
             </StackPane>
-            <Label text="Expense of this month's income" styleClass="dash-ring-sub" wrapText="true"
-                   alignment="CENTER" textAlignment="CENTER" maxWidth="140"/>
+            <Label text="MONTHLY" styleClass="dash-section-hint"/>
         </VBox>
 
         <VBox styleClass="dash-summary-card" spacing="2" GridPane.columnIndex="3" GridPane.rowIndex="0">
             <Label text="Top expense" styleClass="dash-top-expense-label"/>
             <Label fx:id="topExpenseLabel" text="—" styleClass="dash-top-expense-value" wrapText="true"/>
+            <Label text="(BANK + CASH)" styleClass="dash-section-hint"/>
         </VBox>
     </GridPane>
 

@@ -13,7 +13,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
-import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 
@@ -55,8 +54,7 @@ public class ReportsController {
     @FXML private TableColumn<AccountRow, String> accountTypeColumn;
     @FXML private TableColumn<AccountRow, BigDecimal> accountBalanceColumn;
 
-    @FXML private ComboBox<Account> accountLogComboBox;
-    @FXML private ComboBox<Account> accountLogFilterComboBox;
+    @FXML private MenuButton accountLogMenuButton;
     @FXML private TableView<AccountLog> accountLogTable;
     @FXML private TableColumn<AccountLog, String> logDateColumn;
     @FXML private TableColumn<AccountLog, String> logChangeTypeColumn;
@@ -67,13 +65,15 @@ public class ReportsController {
     @FXML private TableColumn<AccountLog, String> logNoteColumn;
 
     private List<Account> allAccounts = new ArrayList<>();
+    private final Map<Long, CheckMenuItem> accountLogCheckItems = new LinkedHashMap<>();
+    private CheckMenuItem allAccountsLogItem;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @FXML
     public void initialize() {
         LocalDate today = LocalDate.now();
-        startDatePicker.setValue(today);
-        endDatePicker.setValue(today);
+        startDatePicker.setValue(today.withDayOfMonth(1));
+        endDatePicker.setValue(today.withDayOfMonth(today.lengthOfMonth()));
 
         expCategoryNameColumn.setCellValueFactory(new PropertyValueFactory<>("categoryName"));
         expCategoryAmountColumn.setCellValueFactory(new PropertyValueFactory<>("amount"));
@@ -90,14 +90,6 @@ public class ReportsController {
         logNoteColumn.setCellValueFactory(new PropertyValueFactory<>("note"));
         logChangeTypeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getChangeType().name()));
         logRefTypeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getReferenceType().name()));
-
-        StringConverter<Account> converter = new StringConverter<Account>() {
-            public String toString(Account a) { return a == null ? "All Accounts" : a.getName(); }
-            public Account fromString(String s) { return null; }
-        };
-        accountLogComboBox.setConverter(converter);
-        accountLogComboBox.setOnAction(e -> loadAccountLog());
-        accountLogFilterComboBox.setConverter(converter);
 
         loadReport();
         loadAccountLogDropdown();
@@ -138,40 +130,82 @@ public class ReportsController {
 
     private void loadAccountLogDropdown() {
         allAccounts = accountService.getAccountsByUserId(sessionContext.getCurrentUserId());
-        accountLogComboBox.setItems(FXCollections.observableArrayList(allAccounts));
-        List<Account> filterList = new ArrayList<>();
-        filterList.add(null);
-        filterList.addAll(allAccounts);
-        accountLogFilterComboBox.setItems(FXCollections.observableArrayList(filterList));
+        accountLogMenuButton.getItems().clear();
+        accountLogCheckItems.clear();
+
+        allAccountsLogItem = new CheckMenuItem("All Accounts");
+        allAccountsLogItem.setSelected(true);
+        allAccountsLogItem.setOnAction(e -> {
+            boolean select = allAccountsLogItem.isSelected();
+            for (CheckMenuItem item : accountLogCheckItems.values()) item.setSelected(select);
+            onAccountLogSelectionChanged();
+        });
+        accountLogMenuButton.getItems().add(allAccountsLogItem);
+        accountLogMenuButton.getItems().add(new SeparatorMenuItem());
+
+        for (Account acc : allAccounts) {
+            CheckMenuItem item = new CheckMenuItem(acc.getName());
+            item.setSelected(true);
+            item.setOnAction(e -> {
+                if (!item.isSelected()) allAccountsLogItem.setSelected(false);
+                else if (accountLogCheckItems.values().stream().allMatch(CheckMenuItem::isSelected)) allAccountsLogItem.setSelected(true);
+                onAccountLogSelectionChanged();
+            });
+            accountLogCheckItems.put(acc.getId(), item);
+            accountLogMenuButton.getItems().add(item);
+        }
+
+        onAccountLogSelectionChanged();
+    }
+
+    private List<Account> getSelectedLogAccounts() {
+        List<Account> selected = new ArrayList<>();
+        for (Account acc : allAccounts) {
+            CheckMenuItem item = accountLogCheckItems.get(acc.getId());
+            if (item != null && item.isSelected()) selected.add(acc);
+        }
+        return selected;
+    }
+
+    private void onAccountLogSelectionChanged() {
+        List<Account> selected = getSelectedLogAccounts();
+        if (selected.isEmpty()) {
+            accountLogMenuButton.setText("Select accounts");
+        } else if (selected.size() == allAccounts.size()) {
+            accountLogMenuButton.setText("All Accounts");
+        } else if (selected.size() == 1) {
+            accountLogMenuButton.setText(selected.get(0).getName());
+        } else {
+            accountLogMenuButton.setText(selected.size() + " accounts selected");
+        }
+        loadAccountLog();
     }
 
     private void loadAccountLog() {
-        Account selected = accountLogComboBox.getValue();
-        if (selected == null) { accountLogTable.setItems(FXCollections.observableArrayList()); return; }
-        accountLogTable.setItems(FXCollections.observableArrayList(accountService.getAccountLogs(selected.getId())));
+        List<Account> selected = getSelectedLogAccounts();
+        if (selected.isEmpty()) { accountLogTable.setItems(FXCollections.observableArrayList()); return; }
+        List<AccountLog> combined = new ArrayList<>();
+        for (Account acc : selected) combined.addAll(accountService.getAccountLogs(acc.getId()));
+        combined.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+        accountLogTable.setItems(FXCollections.observableArrayList(combined));
     }
 
     @FXML
     public void handleExportCSV() {
-        Account filterAccount = accountLogFilterComboBox.getValue();
-        Map<String, List<AccountLog>> exportMap = new LinkedHashMap<>();
+        List<Account> selectedAccounts = getSelectedLogAccounts();
+        if (selectedAccounts.isEmpty()) { showAlert("Error", "Select at least one account to export"); return; }
 
-        if (filterAccount != null) {
-            List<AccountLog> logs = accountService.getAccountLogs(filterAccount.getId());
-            if (logs.isEmpty()) { showAlert("Error", "No log data for selected account"); return; }
-            exportMap.put(filterAccount.getName(), logs);
-        } else {
-            for (Account acc : allAccounts) {
-                List<AccountLog> logs = accountService.getAccountLogs(acc.getId());
-                if (!logs.isEmpty()) exportMap.put(acc.getName(), logs);
-            }
-            if (exportMap.isEmpty()) { showAlert("Error", "No log data found"); return; }
+        Map<String, List<AccountLog>> exportMap = new LinkedHashMap<>();
+        for (Account acc : selectedAccounts) {
+            List<AccountLog> logs = accountService.getAccountLogs(acc.getId());
+            if (!logs.isEmpty()) exportMap.put(acc.getName(), logs);
         }
+        if (exportMap.isEmpty()) { showAlert("Error", "No log data found"); return; }
 
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Save Account Log");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
-        chooser.setInitialFileName(filterAccount != null ? filterAccount.getName() + "_log.csv" : "all_accounts_log.csv");
+        chooser.setInitialFileName(selectedAccounts.size() == 1 ? selectedAccounts.get(0).getName() + "_log.csv" : "accounts_log.csv");
         File file = chooser.showSaveDialog(null);
         if (file == null) return;
 

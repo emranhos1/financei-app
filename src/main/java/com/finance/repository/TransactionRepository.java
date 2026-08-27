@@ -34,4 +34,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("SELECT MIN(t.date) FROM Transaction t WHERE t.userId = :userId")
     LocalDate findEarliestDateByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.userId = :userId AND t.type = 'income' AND t.toAccountId IN :accountIds AND t.date BETWEEN :startDate AND :endDate")
+    BigDecimal sumIncomeByToAccountIdsAndDateRange(@Param("userId") Long userId, @Param("accountIds") List<Long> accountIds, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.userId = :userId AND t.categoryId = :categoryId AND t.type = 'expense' AND t.fromAccountId IN :accountIds AND t.date BETWEEN :startDate AND :endDate")
+    BigDecimal sumExpenseByCategoryAndFromAccountIds(@Param("userId") Long userId, @Param("categoryId") Long categoryId, @Param("accountIds") List<Long> accountIds, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

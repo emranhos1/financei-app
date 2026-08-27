@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -227,6 +228,11 @@ public class TransactionService {
         return transactionRepository.sumExpenseByCategory(userId, categoryId, startDate, endDate);
     }
 
+    public BigDecimal getExpenseByCategoryForAccounts(Long userId, Long categoryId, List<Long> accountIds, LocalDate startDate, LocalDate endDate) {
+        if (accountIds == null || accountIds.isEmpty()) return BigDecimal.ZERO;
+        return transactionRepository.sumExpenseByCategoryAndFromAccountIds(userId, categoryId, accountIds, startDate, endDate);
+    }
+
     public BigDecimal getIncomeByCategory(Long userId, Long categoryId, LocalDate startDate, LocalDate endDate) {
         return transactionRepository.sumIncomeByCategory(userId, categoryId, startDate, endDate);
     }
@@ -239,6 +245,22 @@ public class TransactionService {
     /** Earliest transaction date this user has ever recorded, or null if they have none. */
     public LocalDate getEarliestTransactionDate(Long userId) {
         return transactionRepository.findEarliestDateByUserId(userId);
+    }
+
+    public BigDecimal getIncomeByAccountIds(Long userId, List<Long> accountIds, LocalDate startDate, LocalDate endDate) {
+        if (accountIds == null || accountIds.isEmpty()) return BigDecimal.ZERO;
+        return transactionRepository.sumIncomeByToAccountIdsAndDateRange(userId, accountIds, startDate, endDate);
+    }
+
+    /** Expense for one account type over a date range: EXPENSE transactions paid from accounts
+     *  of that type. Transfers between the user's own accounts (Bank, Cash, DPS, FDR, Plot, etc.)
+     *  are never counted here - the money is still theirs, just moved, so it isn't real spending. */
+    public BigDecimal getEffectiveExpense(Long userId, List<Account> accounts, String typeName, LocalDate start, LocalDate end) {
+        List<Long> accountIds = new ArrayList<>();
+        for (Account a : accounts) {
+            if (typeName.equalsIgnoreCase(a.getAccountType().getName())) accountIds.add(a.getId());
+        }
+        return getExpenseByAccountIds(userId, accountIds, start, end);
     }
 
     public BigDecimal getNetIncome(Long userId, LocalDate startDate, LocalDate endDate) {

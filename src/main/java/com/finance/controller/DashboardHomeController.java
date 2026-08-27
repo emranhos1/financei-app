@@ -84,8 +84,8 @@ public class DashboardHomeController {
         buildBalanceCards(userId);
         buildNetWorthAndChips(accounts);
         buildRecentTransactions(userId, accounts);
-        buildExpenseRing(userId, monthStart, today);
-        buildTopExpense(userId, monthStart, today);
+        buildExpenseRing(userId, accounts, monthStart, today);
+        buildTopExpense(userId, accounts, monthStart, today);
         buildMonthlyExpenseByType(cashMonthlyExpenseBox, userId, accounts, "CASH");
         buildMonthlyExpenseByType(bankMonthlyExpenseBox, userId, accounts, "BANK");
     }
@@ -227,20 +227,31 @@ public class DashboardHomeController {
         return row;
     }
 
-    private void buildExpenseRing(Long userId, LocalDate monthStart, LocalDate today) {
-        BigDecimal mInc = transactionService.getTotalIncome(userId, monthStart, today);
-        BigDecimal mExp = transactionService.getTotalExpense(userId, monthStart, today);
-
-        int pct;
-        if (mInc.compareTo(BigDecimal.ZERO) <= 0) {
-            pct = mExp.compareTo(BigDecimal.ZERO) > 0 ? 100 : 0;
-        } else {
-            BigDecimal ratio = mExp.divide(mInc, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-            pct = ratio.setScale(0, RoundingMode.HALF_UP).intValue();
-            if (pct > 100) pct = 100;
-            if (pct < 0) pct = 0;
+    /**
+     * "Expense of this month's income" ring - scoped to Bank + Cash only (like the Net worth
+     * card), not every account type. mInc is income received into Bank/Cash accounts this month.
+     * mExp is EXPENSE transactions paid from Bank/Cash accounts this month (transfers excluded).
+     */
+    private void buildExpenseRing(Long userId, List<Account> accounts, LocalDate monthStart, LocalDate today) {
+        List<Long> bankAndCashIds = new ArrayList<>();
+        for (Account a : accounts) {
+            String atName = a.getAccountType().getName();
+            if ("BANK".equalsIgnoreCase(atName) || "CASH".equalsIgnoreCase(atName)) bankAndCashIds.add(a.getId());
         }
-        expenseRingLabel.setText(pct + "%");
+        BigDecimal mInc = transactionService.getIncomeByAccountIds(userId, bankAndCashIds, monthStart, today);
+        BigDecimal mExp = transactionService.getEffectiveExpense(userId, accounts, "BANK", monthStart, today)
+                .add(transactionService.getEffectiveExpense(userId, accounts, "CASH", monthStart, today));
+
+        BigDecimal pctPrecise;
+        if (mInc.compareTo(BigDecimal.ZERO) <= 0) {
+            pctPrecise = mExp.compareTo(BigDecimal.ZERO) > 0 ? BigDecimal.valueOf(100) : BigDecimal.ZERO;
+        } else {
+            pctPrecise = mExp.divide(mInc, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+            if (pctPrecise.compareTo(BigDecimal.valueOf(100)) > 0) pctPrecise = BigDecimal.valueOf(100);
+            if (pctPrecise.compareTo(BigDecimal.ZERO) < 0) pctPrecise = BigDecimal.ZERO;
+        }
+        int pct = pctPrecise.setScale(0, RoundingMode.HALF_UP).intValue();
+        expenseRingLabel.setText(pctPrecise.setScale(2, RoundingMode.HALF_UP).toPlainString() + "%");
 
         // remove any previously drawn ring shapes (keep the centered label)
         expenseRingStack.getChildren().removeIf(n -> n instanceof Circle);
@@ -261,12 +272,19 @@ public class DashboardHomeController {
         expenseRingStack.getChildren().add(0, track);
     }
 
-    private void buildTopExpense(Long userId, LocalDate monthStart, LocalDate today) {
+    /** Scoped to Bank + Cash accounts only, matching Net worth and the expense ring. */
+    private void buildTopExpense(Long userId, List<Account> accounts, LocalDate monthStart, LocalDate today) {
+        List<Long> bankAndCashIds = new ArrayList<>();
+        for (Account a : accounts) {
+            String atName = a.getAccountType().getName();
+            if ("BANK".equalsIgnoreCase(atName) || "CASH".equalsIgnoreCase(atName)) bankAndCashIds.add(a.getId());
+        }
+
         List<Category> expenseCategories = categoryService.getExpenseCategories(userId);
         Category topCategory = null;
         BigDecimal topAmount = BigDecimal.ZERO;
         for (Category c : expenseCategories) {
-            BigDecimal amount = transactionService.getExpenseByCategory(userId, c.getId(), monthStart, today);
+            BigDecimal amount = transactionService.getExpenseByCategoryForAccounts(userId, c.getId(), bankAndCashIds, monthStart, today);
             if (amount.compareTo(topAmount) > 0) { topAmount = amount; topCategory = c; }
         }
         if (topCategory == null) {
@@ -293,11 +311,6 @@ public class DashboardHomeController {
     private void buildMonthlyExpenseByType(VBox container, Long userId, List<Account> accounts, String typeName) {
         container.getChildren().clear();
 
-        List<Long> accountIds = new ArrayList<>();
-        for (Account a : accounts) {
-            if (typeName.equalsIgnoreCase(a.getAccountType().getName())) accountIds.add(a.getId());
-        }
-
         LocalDate today = LocalDate.now();
         int year = today.getYear();
         int currentMonth = today.getMonthValue();
@@ -313,7 +326,7 @@ public class DashboardHomeController {
             boolean isManual = existing != null && Boolean.TRUE.equals(existing.getIsManual());
 
             if (month == currentMonth && !isManual) {
-                BigDecimal calculated = transactionService.getExpenseByAccountIds(userId, accountIds, ym.atDay(1), ym.atEndOfMonth());
+                BigDecimal calculated = transactionService.getEffectiveExpense(userId, accounts, typeName, ym.atDay(1), ym.atEndOfMonth());
                 monthlyExpenseOverrideService.autoSaveCurrentMonth(userId, typeName, year, month, calculated);
                 amount = calculated;
             } else {

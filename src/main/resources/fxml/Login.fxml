@@ -14,14 +14,13 @@
 
 <VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.finance.controller.LoginController"
-      alignment="CENTER" spacing="8" style="-fx-padding: 15 25 15 25;">
+      alignment="CENTER" spacing="8" style="-fx-padding: 15 45 15 45;">
 
     <ImageView fitWidth="48" fitHeight="48" preserveRatio="true">
         <Image url="@/images/logo.png" />
     </ImageView>
 
     <Label text="Daily Finance Management System" style="-fx-font-size: 17; -fx-font-weight: bold;" styleClass="app-title" textAlignment="CENTER" wrapText="true"/>
-    <Label text="Login" style="-fx-font-size: 13;" styleClass="app-subtitle"/>
 
     <HBox spacing="8" alignment="CENTER_LEFT">
         <Label text="Username" prefWidth="72"/>

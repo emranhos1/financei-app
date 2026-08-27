@@ -66,9 +66,7 @@
 
     <HBox spacing="10" style="-fx-alignment: CENTER-LEFT;">
         <Label text="Account Log" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
-        <ComboBox fx:id="accountLogComboBox" prefWidth="200" promptText="View account log"/>
-        <Label text="Export:"/>
-        <ComboBox fx:id="accountLogFilterComboBox" prefWidth="180" promptText="All Accounts"/>
+        <MenuButton fx:id="accountLogMenuButton" text="All Accounts" prefWidth="220"/>
         <Button text="Export CSV" onAction="#handleExportCSV" styleClass="btn-secondary"/>
     </HBox>
 
