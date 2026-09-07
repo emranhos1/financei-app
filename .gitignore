@@ -9,6 +9,8 @@ dependency-reduced-pom.xml
 
 # IDE
 .idea/
+.claude
+.vscode
 *.iml
 *.iws
 *.ipr
