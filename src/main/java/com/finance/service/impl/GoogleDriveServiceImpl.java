@@ -62,6 +62,13 @@ public class GoogleDriveServiceImpl implements IGoogleDriveService {
     }
 
     @Override
+    public boolean hasStoredCredentials() {
+        File tokensDir = new File(TOKENS_DIRECTORY_PATH);
+        File[] files = tokensDir.listFiles();
+        return tokensDir.exists() && files != null && files.length > 0;
+    }
+
+    @Override
     public void connect() throws Exception {
         NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
         Credential credential = getCredentials(httpTransport);

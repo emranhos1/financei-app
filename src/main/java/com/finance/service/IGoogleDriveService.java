@@ -7,6 +7,10 @@ public interface IGoogleDriveService {
     /** True once a successful OAuth2 connection has been established in this session. */
     boolean isConnected();
 
+    /** True if a token from a previous connect() is stored on disk, so connect() can succeed
+     *  silently (no browser popup) without the user being present - used to gate automatic backups. */
+    boolean hasStoredCredentials();
+
     /** Runs the OAuth2 installed-app flow (opens the system browser) and stores the token for reuse. */
     void connect() throws Exception;
 

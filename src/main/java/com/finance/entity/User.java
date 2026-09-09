@@ -33,6 +33,14 @@ public class User {
     @Column(nullable = false)
     private UserStatus status;
 
+    /** Both nullable - accounts created before this feature existed have neither set, and
+     *  self-service password reset is refused for them until an admin sets one via Admin Panel. */
+    @Column(name = "security_question", length = 255)
+    private String securityQuestion;
+
+    @Column(name = "security_answer_hash", length = 255)
+    private String securityAnswerHash;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

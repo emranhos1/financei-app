@@ -15,10 +15,14 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +51,14 @@ public class TransferController {
     @FXML private TableColumn<Transaction, String> transferTypeColumn;
     @FXML private TableColumn<Transaction, BigDecimal> amountColumn;
     @FXML private TableColumn<Transaction, String> noteColumn;
+    @FXML private Button trPrevPageBtn;
+    @FXML private Button trNextPageBtn;
+    @FXML private Label trPageLabel;
+    @FXML private ComboBox<Integer> trPageSizeComboBox;
+
+    private static final List<Integer> PAGE_SIZE_OPTIONS = Arrays.asList(5, 10, 20, 50, 100);
+    private int trCurrentPage = 0;
+    private int trTotalPages = 1;
 
     @FXML private TableView<TransferType> typesTable;
     @FXML private TableColumn<TransferType, Long> typeIdColumn;
@@ -64,7 +76,10 @@ public class TransferController {
         setupTypesTable();
         loadAccounts();
         loadTypes();
-        loadTransfers();
+        trPageSizeComboBox.setItems(FXCollections.observableArrayList(PAGE_SIZE_OPTIONS));
+        trPageSizeComboBox.setValue(20);
+        trPageSizeComboBox.setOnAction(e -> loadTransfersPage(0));
+        loadTransfersPage(0);
         datePicker.setValue(LocalDate.now());
         resetForm();
         resetTypeForm();
@@ -145,11 +160,27 @@ public class TransferController {
         toAccountComboBox.setItems(FXCollections.observableArrayList(accounts));
     }
 
-    private void loadTransfers() {
-        List<Transaction> transfers = transactionService.getTransactionsByType(
-                sessionContext.getCurrentUserId(), Transaction.TransactionType.TRANSFER);
-        transfers.sort((a, b) -> b.getDate().compareTo(a.getDate()));
-        transfersTable.setItems(FXCollections.observableArrayList(transfers));
+    private void loadTransfersPage(int page) {
+        int pageSize = trPageSizeComboBox.getValue() != null ? trPageSizeComboBox.getValue() : 20;
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<Transaction> result = transactionService.getTransfersPage(sessionContext.getCurrentUserId(), pageable);
+
+        trCurrentPage = result.getNumber();
+        trTotalPages = Math.max(result.getTotalPages(), 1);
+        transfersTable.setItems(FXCollections.observableArrayList(result.getContent()));
+        trPageLabel.setText("Page " + (trCurrentPage + 1) + " of " + trTotalPages + " (" + result.getTotalElements() + " total)");
+        trPrevPageBtn.setDisable(trCurrentPage <= 0);
+        trNextPageBtn.setDisable(trCurrentPage >= trTotalPages - 1);
+    }
+
+    @FXML
+    public void handleTrPrevPage() {
+        if (trCurrentPage > 0) loadTransfersPage(trCurrentPage - 1);
+    }
+
+    @FXML
+    public void handleTrNextPage() {
+        if (trCurrentPage < trTotalPages - 1) loadTransfersPage(trCurrentPage + 1);
     }
 
     @FXML
@@ -171,7 +202,7 @@ public class TransferController {
             transactionService.recordTransferTransaction(
                     sessionContext.getCurrentUserId(), date, new BigDecimal(amountStr), from.getId(), to.getId(),
                     transferType.getId(), note);
-            resetForm(); loadAccounts(); loadTransfers();
+            resetForm(); loadAccounts(); loadTransfersPage(0);
         } catch (NumberFormatException e) {
             showAlert("Validation Error", "Amount must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -191,7 +222,7 @@ public class TransferController {
         try {
             transactionService.updateTransaction(selectedTransfer.getId(), sessionContext.getCurrentUserId(),
                     date, new BigDecimal(amountStr), null, transferType.getId(), note);
-            resetForm(); loadAccounts(); loadTransfers();
+            resetForm(); loadAccounts(); loadTransfersPage(0);
         } catch (NumberFormatException e) {
             showAlert("Validation Error", "Amount must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -203,7 +234,7 @@ public class TransferController {
         if (!confirm("Delete this transfer? The account balances will be reversed.")) return;
         try {
             transactionService.deleteTransaction(selectedTransfer.getId(), sessionContext.getCurrentUserId());
-            resetForm(); loadAccounts(); loadTransfers();
+            resetForm(); loadAccounts(); loadTransfersPage(0);
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
     }
 

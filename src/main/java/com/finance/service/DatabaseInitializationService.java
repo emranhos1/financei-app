@@ -20,6 +20,7 @@ public class DatabaseInitializationService {
     private final DataSource dataSource;
     private final UserService userService;
     private final MonthlyExpenseOverrideService monthlyExpenseOverrideService;
+    private final AutoBackupService autoBackupService;
 
     @Value("${admin.username}")
     private String adminUsername;
@@ -63,5 +64,15 @@ public class DatabaseInitializationService {
         } catch (Exception e) {
             log.error("Monthly expense backfill failed - dashboard will still work, only historical months may show 0 until manually corrected", e);
         }
+
+        Thread autoBackupThread = new Thread(() -> {
+            try {
+                autoBackupService.runIfDue();
+            } catch (Exception e) {
+                log.error("Automatic backup check failed", e);
+            }
+        }, "auto-backup-check");
+        autoBackupThread.setDaemon(true);
+        autoBackupThread.start();
     }
 }

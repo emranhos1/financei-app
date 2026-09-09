@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.finance.controller.LoanController"
+      spacing="10" styleClass="content-pane">
+
+    <Label text="Loans (Money Lent &amp; Borrowed)" styleClass="page-title"/>
+
+    <TabPane VBox.vgrow="ALWAYS">
+
+        <Tab text="Loans" closable="false">
+            <HBox spacing="15" styleClass="tab-content" style="-fx-padding: 10;">
+
+                <ScrollPane fitToWidth="true" styleClass="dash-scroll" hbarPolicy="NEVER" prefWidth="340">
+                <VBox spacing="8" styleClass="form-pane">
+
+                    <VBox fx:id="addLoanBox" spacing="8">
+                        <GridPane hgap="10" vgap="4">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="50" minWidth="10"/>
+                                <ColumnConstraints percentWidth="50" minWidth="10"/>
+                            </columnConstraints>
+                            <Label text="Person" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label text="Account" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="personComboBox" maxWidth="Infinity" minWidth="0" promptText="Select a person"
+                                      GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="accountComboBox" maxWidth="Infinity" minWidth="0"
+                                      GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        </GridPane>
+
+                        <Label text="Type"/>
+                        <HBox spacing="15">
+                            <RadioButton fx:id="lentRadio" text="I Gave" selected="true">
+                                <toggleGroup><ToggleGroup fx:id="typeToggleGroup"/></toggleGroup>
+                            </RadioButton>
+                            <RadioButton fx:id="borrowedRadio" text="I Took" toggleGroup="$typeToggleGroup"/>
+                        </HBox>
+
+                        <GridPane hgap="10" vgap="4">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="50" minWidth="10"/>
+                                <ColumnConstraints percentWidth="50" minWidth="10"/>
+                            </columnConstraints>
+                            <Label text="Transfer Type" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label text="Category" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <ComboBox fx:id="transferTypeComboBox" maxWidth="Infinity" minWidth="0" promptText="Optional"
+                                      GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <ComboBox fx:id="categoryComboBox" maxWidth="Infinity" minWidth="0" promptText="Optional"
+                                      GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        </GridPane>
+
+                        <Label text="Amount"/>
+                        <TextField fx:id="amountField" promptText="0.00"/>
+
+                        <GridPane hgap="10" vgap="4">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="50" minWidth="10"/>
+                                <ColumnConstraints percentWidth="50" minWidth="10"/>
+                            </columnConstraints>
+                            <Label text="Date" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label text="Due Date (optional)" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <DatePicker fx:id="datePicker" maxWidth="Infinity" minWidth="0"
+                                        GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <DatePicker fx:id="dueDatePicker" maxWidth="Infinity" minWidth="0"
+                                        GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        </GridPane>
+
+                        <Label text="Note"/>
+                        <TextArea fx:id="noteArea" prefHeight="60" wrapText="true"/>
+
+                        <Button fx:id="saveLoanBtn" text="Save Loan" onAction="#handleSaveLoan" maxWidth="Infinity" styleClass="btn-primary"/>
+                    </VBox>
+
+                    <VBox fx:id="repaymentBox" spacing="8" visible="false" managed="false">
+                        <Label text="Record Repayment" style="-fx-font-weight: bold; -fx-font-size: 13;"/>
+                        <Label fx:id="selectedLoanLabel" wrapText="true" style="-fx-text-fill: #4F6F66;"/>
+
+                        <Label text="Amount"/>
+                        <TextField fx:id="repayAmountField" promptText="0.00"/>
+
+                        <Label text="Account"/>
+                        <ComboBox fx:id="repayAccountComboBox" maxWidth="Infinity"/>
+
+                        <Label text="Date"/>
+                        <DatePicker fx:id="repayDatePicker" maxWidth="Infinity"/>
+
+                        <Label text="Note"/>
+                        <TextField fx:id="repayNoteField"/>
+
+                        <HBox spacing="8">
+                            <Button text="Save Repayment" onAction="#handleSaveRepayment" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-primary"/>
+                            <Button text="Delete" onAction="#handleDeleteLoan" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                            <Button text="Cancel" onAction="#handleCancelSelection" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
+                        </HBox>
+                    </VBox>
+
+                    <VBox fx:id="settledSelectionBox" spacing="8" visible="false" managed="false">
+                        <Label text="Selected Loan" style="-fx-font-weight: bold; -fx-font-size: 13;"/>
+                        <Label fx:id="settledLoanLabel" wrapText="true" style="-fx-text-fill: #4F6F66;"/>
+                        <HBox spacing="8">
+                            <Button text="Delete" onAction="#handleDeleteLoan" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                            <Button text="Cancel" onAction="#handleCancelSelection" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
+                        </HBox>
+                    </VBox>
+
+                </VBox>
+                </ScrollPane>
+
+                <VBox spacing="10" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+
+                    <VBox spacing="4" VBox.vgrow="ALWAYS">
+                        <Label text="Persons (click a row to see full history)" style="-fx-font-weight: bold; -fx-font-size: 13;"/>
+                        <TableView fx:id="personsSummaryTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="summaryPersonColumn"   text="Person"         prefWidth="130"/>
+                                <TableColumn fx:id="summaryLentColumn"     text="Total Gave"     prefWidth="105"/>
+                                <TableColumn fx:id="summaryBorrowedColumn" text="Total Took"     prefWidth="115"/>
+                                <TableColumn fx:id="summaryNetColumn"      text="Net Remaining"  prefWidth="115"/>
+                                <TableColumn fx:id="summaryOpenColumn"     text="Open Loans"     prefWidth="90"/>
+                            </columns>
+                            <placeholder><Label text="No loan accounts yet. Add one from the Loan Accounts tab."/></placeholder>
+                        </TableView>
+                    </VBox>
+
+                    <VBox spacing="4" VBox.vgrow="ALWAYS">
+                        <Label fx:id="historyTitleLabel" text="History" style="-fx-font-weight: bold; -fx-font-size: 13;"/>
+                        <TableView fx:id="loansTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="typeColumn"      text="Type"      prefWidth="80"/>
+                                <TableColumn fx:id="principalColumn" text="Principal" prefWidth="95"/>
+                                <TableColumn fx:id="remainingColumn" text="Remaining" prefWidth="95"/>
+                                <TableColumn fx:id="statusColumn"    text="Status"    prefWidth="80"/>
+                                <TableColumn fx:id="dueDateColumn"   text="Due Date"  prefWidth="95"/>
+                                <TableColumn fx:id="noteColumn"      text="Note"      minWidth="130"/>
+                            </columns>
+                            <placeholder><Label text="Select a person above to see their loan history"/></placeholder>
+                        </TableView>
+                    </VBox>
+
+                </VBox>
+
+            </HBox>
+        </Tab>
+
+        <Tab text="Loan Accounts" closable="false">
+            <HBox spacing="15" styleClass="tab-content" style="-fx-padding: 10;">
+
+                <VBox spacing="8" prefWidth="260">
+                    <Label text="Name"/>
+                    <TextField fx:id="personNameField" promptText="e.g. Rahim"/>
+
+                    <Label text="Note (optional)"/>
+                    <TextArea fx:id="personNoteArea" prefHeight="60" wrapText="true"/>
+
+                    <Button fx:id="addPersonBtn" text="Add Loan Account" onAction="#handleAddPerson" maxWidth="Infinity" styleClass="btn-primary"/>
+
+                    <HBox fx:id="personEditButtons" spacing="8" managed="false" visible="false">
+                        <Button text="Delete" onAction="#handleDeletePerson" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                        <Button text="Cancel" onAction="#handleCancelPersonSelection" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
+                    </HBox>
+                </VBox>
+
+                <TableView fx:id="personsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="personListNameColumn" text="Name" prefWidth="180"/>
+                        <TableColumn fx:id="personListNoteColumn" text="Note" minWidth="200"/>
+                    </columns>
+                    <placeholder><Label text="No loan accounts yet. Add one on the left."/></placeholder>
+                </TableView>
+
+            </HBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

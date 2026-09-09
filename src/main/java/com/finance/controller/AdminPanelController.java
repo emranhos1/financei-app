@@ -1,6 +1,7 @@
 package com.finance.controller;
 
 import com.finance.entity.User;
+import com.finance.service.AutoBackupService;
 import com.finance.service.IBackupService;
 import com.finance.service.IGoogleDriveService;
 import com.finance.service.UserService;
@@ -28,6 +29,7 @@ public class AdminPanelController {
     private final UserService userService;
     private final IBackupService backupService;
     private final IGoogleDriveService googleDriveService;
+    private final AutoBackupService autoBackupService;
 
     @FXML
     private TableView<User> usersTable;
@@ -44,6 +46,9 @@ public class AdminPanelController {
     @FXML
     private TableColumn<User, User.UserStatus> statusColumn;
 
+    @FXML private TextField securityQuestionField;
+    @FXML private TextField securityAnswerField;
+
     @FXML private Button exportLocalBtn;
     @FXML private Button importLocalBtn;
     @FXML private Label localStatusLabel;
@@ -55,6 +60,10 @@ public class AdminPanelController {
     @FXML private Button downloadDriveBtn;
     @FXML private Label driveStatusLabel;
     @FXML private ProgressIndicator driveProgress;
+
+    @FXML private CheckBox autoBackupEnabledCheckBox;
+    @FXML private ComboBox<Integer> autoBackupIntervalComboBox;
+    @FXML private Label autoBackupLastRunLabel;
 
     private interface BackgroundAction {
         String run() throws Exception;
@@ -68,6 +77,29 @@ public class AdminPanelController {
         localProgress.setVisible(false);
         driveProgress.setVisible(false);
         refreshDriveButtons();
+
+        setupAutoBackupControls();
+    }
+
+    private void setupAutoBackupControls() {
+        autoBackupIntervalComboBox.setItems(FXCollections.observableArrayList(1, 7));
+        autoBackupIntervalComboBox.setConverter(new javafx.util.StringConverter<Integer>() {
+            @Override public String toString(Integer days) {
+                return days == null ? "" : (days == 1 ? "Day" : "Week");
+            }
+            @Override public Integer fromString(String s) { return null; }
+        });
+
+        autoBackupEnabledCheckBox.setSelected(autoBackupService.isEnabled());
+        autoBackupIntervalComboBox.setValue(autoBackupService.getIntervalDays());
+        autoBackupLastRunLabel.setText("Last auto backup: " + autoBackupService.getLastRunDisplay());
+    }
+
+    @FXML
+    public void handleAutoBackupSettingChanged() {
+        autoBackupService.setEnabled(autoBackupEnabledCheckBox.isSelected());
+        Integer interval = autoBackupIntervalComboBox.getValue();
+        autoBackupService.setIntervalDays(interval != null ? interval : 1);
     }
 
     private void setupTable() {
@@ -113,6 +145,29 @@ public class AdminPanelController {
             showAlert("Success", "User deactivated successfully");
         } catch (Exception e) {
             showAlert("Error", "Failed to deactivate user: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleSetSecurityQuestion() {
+        User selected = usersTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Error", "Please select a user");
+            return;
+        }
+        String question = securityQuestionField.getText().trim();
+        String answer = securityAnswerField.getText().trim();
+        if (question.isEmpty() || answer.isEmpty()) {
+            showAlert("Error", "Security question and answer are required");
+            return;
+        }
+        try {
+            userService.setSecurityQuestion(selected.getId(), question, answer);
+            securityQuestionField.clear();
+            securityAnswerField.clear();
+            showAlert("Success", "Security question set for '" + selected.getUsername() + "'");
+        } catch (Exception e) {
+            showAlert("Error", "Failed to set security question: " + e.getMessage());
         }
     }
 

@@ -7,8 +7,6 @@
       fx:controller="com.finance.controller.TransferController"
       spacing="10" styleClass="content-pane">
 
-    <Label text="Transfer Between Accounts" styleClass="page-title"/>
-
     <TabPane VBox.vgrow="ALWAYS">
 
         <!-- ===== TAB 1: Transfer ===== -->
@@ -46,18 +44,29 @@
 
                 </VBox>
 
-                <TableView fx:id="transfersTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
-                    <columns>
-                        <TableColumn fx:id="dateColumn"         text="Date"          prefWidth="95"/>
-                        <TableColumn fx:id="typeColumn"         text="Type"          prefWidth="80"/>
-                        <TableColumn fx:id="fromColumn"         text="From"          prefWidth="120"/>
-                        <TableColumn fx:id="toColumn"           text="To"            prefWidth="120"/>
-                        <TableColumn fx:id="transferTypeColumn" text="Transfer Type" prefWidth="110"/>
-                        <TableColumn fx:id="amountColumn"       text="Amount"        prefWidth="90"/>
-                        <TableColumn fx:id="noteColumn"         text="Note"          minWidth="150"/>
-                    </columns>
-                    <placeholder><Label text="No transfers yet"/></placeholder>
-                </TableView>
+                <VBox spacing="6" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                    <TableView fx:id="transfersTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="dateColumn"         text="Date"          prefWidth="95"/>
+                            <TableColumn fx:id="typeColumn"         text="Type"          prefWidth="80"/>
+                            <TableColumn fx:id="fromColumn"         text="From"          prefWidth="120"/>
+                            <TableColumn fx:id="toColumn"           text="To"            prefWidth="120"/>
+                            <TableColumn fx:id="transferTypeColumn" text="Transfer Type" prefWidth="110"/>
+                            <TableColumn fx:id="amountColumn"       text="Amount"        prefWidth="90"/>
+                            <TableColumn fx:id="noteColumn"         text="Note"          minWidth="150"/>
+                        </columns>
+                        <placeholder><Label text="No transfers yet"/></placeholder>
+                    </TableView>
+
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button fx:id="trPrevPageBtn" text="◀ Prev" onAction="#handleTrPrevPage" styleClass="btn-secondary"/>
+                        <Label fx:id="trPageLabel" text="Page 1 of 1"/>
+                        <Button fx:id="trNextPageBtn" text="Next ▶" onAction="#handleTrNextPage" styleClass="btn-secondary"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="Rows per page:"/>
+                        <ComboBox fx:id="trPageSizeComboBox" prefWidth="80"/>
+                    </HBox>
+                </VBox>
 
             </HBox>
         </Tab>

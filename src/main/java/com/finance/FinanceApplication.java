@@ -38,16 +38,14 @@ public class FinanceApplication extends Application {
 
         Thread springWaitThread = new Thread(() -> {
             try {
-                if (!springInitialized.await(30, TimeUnit.SECONDS)) {
+                if (!springInitialized.await(90, TimeUnit.SECONDS)) {
                     System.err.println("ERROR: Spring Boot initialization timeout");
                     Platform.exit();
-                    System.exit(1);
                     return;
                 }
                 if (applicationContext == null) {
                     System.err.println("ERROR: Spring application context is null");
                     Platform.exit();
-                    System.exit(1);
                     return;
                 }
                 Platform.runLater(() -> {

@@ -2,10 +2,12 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.chart.*?>
 
-<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.finance.controller.ReportsController"
-      spacing="10" style="-fx-padding: 15;">
+<ScrollPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.finance.controller.ReportsController"
+            fitToWidth="true" styleClass="dash-scroll">
+<VBox spacing="10" style="-fx-padding: 15;">
 
     <Label text="Financial Reports" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
 
@@ -17,15 +19,75 @@
         <Button text="Generate" onAction="#handleGenerateReport" styleClass="btn-primary"/>
     </HBox>
 
-    <VBox style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;">
-        <GridPane hgap="30" vgap="8">
-            <Label text="Total Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-            <Label fx:id="totalIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
-            <Label text="Total Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-            <Label fx:id="totalExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
-            <Label text="Net Income:"    GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-            <Label fx:id="netIncomeLabel"    text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
-        </GridPane>
+    <HBox spacing="10">
+        <VBox style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;" HBox.hgrow="ALWAYS">
+            <GridPane hgap="30" vgap="8">
+                <Label text="Total Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <Label fx:id="totalIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+                <Label text="Total Expense:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <Label fx:id="totalExpenseLabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+                <Label text="Net Income:"    GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                <Label fx:id="netIncomeLabel"    text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+            </GridPane>
+        </VBox>
+
+        <VBox spacing="6" style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;" HBox.hgrow="ALWAYS">
+            <Label text="Period Comparison" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="A:"/>
+                <DatePicker fx:id="compareAStartPicker" prefWidth="115"/>
+                <Label text="to"/>
+                <DatePicker fx:id="compareAEndPicker" prefWidth="115"/>
+                <Label text="B:"/>
+                <DatePicker fx:id="compareBStartPicker" prefWidth="115"/>
+                <Label text="to"/>
+                <DatePicker fx:id="compareBEndPicker" prefWidth="115"/>
+                <Button text="Compare" onAction="#handleCompare" styleClass="btn-primary"/>
+            </HBox>
+            <GridPane hgap="20" vgap="4">
+                <Label text="A" style="-fx-font-weight: bold;" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                <Label text="B" style="-fx-font-weight: bold;" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                <Label text="Change (A → B)" style="-fx-font-weight: bold;" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                <Label text="Income:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <Label fx:id="compareIncomeALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                <Label fx:id="compareIncomeBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                <Label fx:id="compareIncomeChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+                <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                <Label fx:id="compareExpenseALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                <Label fx:id="compareExpenseBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                <Label fx:id="compareExpenseChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+
+                <Label text="Net:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                <Label fx:id="compareNetALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+                <Label fx:id="compareNetBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+                <Label fx:id="compareNetChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+            </GridPane>
+        </VBox>
+    </HBox>
+
+    <VBox spacing="4" style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;">
+        <HBox alignment="CENTER_LEFT" spacing="10">
+            <Label text="Income vs Expense Trend (Last 12 Months)" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <HBox spacing="4" alignment="CENTER_LEFT">
+                <Region style="-fx-background-color: #E74C3C; -fx-min-width: 10; -fx-min-height: 10; -fx-max-width: 10; -fx-max-height: 10; -fx-background-radius: 5;"/>
+                <Label text="Income" style="-fx-font-size: 11;"/>
+            </HBox>
+            <HBox spacing="4" alignment="CENTER_LEFT">
+                <Region style="-fx-background-color: #F39C12; -fx-min-width: 10; -fx-min-height: 10; -fx-max-width: 10; -fx-max-height: 10; -fx-background-radius: 5;"/>
+                <Label text="Expense" style="-fx-font-size: 11;"/>
+            </HBox>
+        </HBox>
+        <LineChart fx:id="trendChart" minHeight="160" prefHeight="160" animated="false" legendVisible="false">
+            <xAxis>
+                <CategoryAxis fx:id="trendXAxis"/>
+            </xAxis>
+            <yAxis>
+                <NumberAxis fx:id="trendYAxis"/>
+            </yAxis>
+        </LineChart>
     </VBox>
 
     <HBox spacing="10" VBox.vgrow="NEVER">
@@ -70,7 +132,7 @@
         <Button text="Export CSV" onAction="#handleExportCSV" styleClass="btn-secondary"/>
     </HBox>
 
-    <TableView fx:id="accountLogTable" VBox.vgrow="ALWAYS">
+    <TableView fx:id="accountLogTable" minHeight="250" prefHeight="300">
         <columns>
             <TableColumn fx:id="logDateColumn"          text="Date"          prefWidth="100"/>
             <TableColumn fx:id="logChangeTypeColumn"    text="Change"        prefWidth="85"/>
@@ -83,4 +145,14 @@
         <placeholder><Label text="Select an account to view its log"/></placeholder>
     </TableView>
 
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Button fx:id="logPrevPageBtn" text="◀ Prev" onAction="#handleLogPrevPage" styleClass="btn-secondary"/>
+        <Label fx:id="logPageLabel" text="Page 1 of 1"/>
+        <Button fx:id="logNextPageBtn" text="Next ▶" onAction="#handleLogNextPage" styleClass="btn-secondary"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="Rows per page:"/>
+        <ComboBox fx:id="logPageSizeComboBox" prefWidth="80"/>
+    </HBox>
+
 </VBox>
+</ScrollPane>

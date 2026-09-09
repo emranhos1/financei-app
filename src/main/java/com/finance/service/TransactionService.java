@@ -6,6 +6,8 @@ import com.finance.entity.Transaction;
 import com.finance.repository.AccountRepository;
 import com.finance.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,11 @@ public class TransactionService {
 
     public Transaction recordIncomeTransaction(Long userId, LocalDate date, BigDecimal amount,
                                                Long toAccountId, Long categoryId, String note) {
+        return recordIncomeTransaction(userId, date, amount, toAccountId, categoryId, null, note);
+    }
+
+    public Transaction recordIncomeTransaction(Long userId, LocalDate date, BigDecimal amount,
+                                               Long toAccountId, Long categoryId, Long transferTypeId, String note) {
         Account toAccount = accountRepository.findById(toAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("To account not found"));
         if (!toAccount.getUserId().equals(userId)) throw new IllegalArgumentException("Account does not belong to user");
@@ -34,7 +41,8 @@ public class TransactionService {
 
         Transaction tx = transactionRepository.save(Transaction.builder()
                 .userId(userId).date(date).type(Transaction.TransactionType.INCOME)
-                .amount(amount).toAccountId(toAccountId).categoryId(categoryId).note(note).build());
+                .amount(amount).toAccountId(toAccountId).categoryId(categoryId)
+                .transferTypeId(transferTypeId).note(note).build());
 
         accountService.logBalanceChange(toAccountId, userId, before, toAccount.getBalance(),
                 AccountLog.ChangeType.CREDIT, AccountLog.ReferenceType.INCOME, tx.getId(), note);
@@ -43,6 +51,11 @@ public class TransactionService {
 
     public Transaction recordExpenseTransaction(Long userId, LocalDate date, BigDecimal amount,
                                                 Long fromAccountId, Long categoryId, String note) {
+        return recordExpenseTransaction(userId, date, amount, fromAccountId, categoryId, null, note);
+    }
+
+    public Transaction recordExpenseTransaction(Long userId, LocalDate date, BigDecimal amount,
+                                                Long fromAccountId, Long categoryId, Long transferTypeId, String note) {
         Account fromAccount = accountRepository.findById(fromAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("From account not found"));
         if (!fromAccount.getUserId().equals(userId)) throw new IllegalArgumentException("Account does not belong to user");
@@ -57,7 +70,8 @@ public class TransactionService {
 
         Transaction tx = transactionRepository.save(Transaction.builder()
                 .userId(userId).date(date).type(Transaction.TransactionType.EXPENSE)
-                .amount(amount).fromAccountId(fromAccountId).categoryId(categoryId).note(note).build());
+                .amount(amount).fromAccountId(fromAccountId).categoryId(categoryId)
+                .transferTypeId(transferTypeId).note(note).build());
 
         accountService.logBalanceChange(fromAccountId, userId, before, fromAccount.getBalance(),
                 AccountLog.ChangeType.DEBIT, AccountLog.ReferenceType.EXPENSE, tx.getId(), note);
@@ -195,6 +209,23 @@ public class TransactionService {
         transactionRepository.deleteById(transactionId);
     }
 
+    /** Tags a transaction (typically a loan repayment) as belonging to a loan, so the loan's
+     *  remaining balance can be derived from the sum of its tagged repayment transactions. */
+    public void linkTransactionToLoan(Long transactionId, Long loanId) {
+        Transaction tx = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
+        tx.setLoanId(loanId);
+        transactionRepository.save(tx);
+    }
+
+    public BigDecimal getLoanRepaidAmount(Long loanId) {
+        return transactionRepository.sumAmountByLoanId(loanId);
+    }
+
+    public List<Transaction> getTransactionsByLoanId(Long loanId) {
+        return transactionRepository.findByLoanId(loanId);
+    }
+
     public Transaction getTransactionById(Long transactionId) {
         return transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
@@ -202,6 +233,16 @@ public class TransactionService {
 
     public List<Transaction> getTransactionsByUserId(Long userId) {
         return transactionRepository.findByUserIdOrderByDateDesc(userId);
+    }
+
+    public Page<Transaction> getTransactionsPage(Long userId, List<Transaction.TransactionType> types,
+                                                  Long categoryId, LocalDate date, Long accountId,
+                                                  Transaction.TransactionType filterType, Pageable pageable) {
+        return transactionRepository.findTransactionsPage(userId, types, categoryId, date, accountId, filterType, pageable);
+    }
+
+    public Page<Transaction> getTransfersPage(Long userId, Pageable pageable) {
+        return transactionRepository.findByUserIdAndTypeOrderByDateDescIdDesc(userId, Transaction.TransactionType.TRANSFER, pageable);
     }
 
     public List<Transaction> getTransactionsByDateRange(Long userId, LocalDate startDate, LocalDate endDate) {

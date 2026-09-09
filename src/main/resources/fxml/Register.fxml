@@ -23,6 +23,12 @@
     <Label text="Confirm Password"/>
     <PasswordField fx:id="confirmPasswordField" promptText="Confirm password"/>
 
+    <Label text="Security Question (for password reset)"/>
+    <TextField fx:id="securityQuestionField" promptText="e.g. What is your favorite place?"/>
+
+    <Label text="Security Answer"/>
+    <TextField fx:id="securityAnswerField" promptText="Your answer"/>
+
     <HBox spacing="10" alignment="CENTER">
         <Button text="Register" style="-fx-padding: 8;" styleClass="btn-primary" onAction="#handleRegister"/>
         <Button text="Cancel" style="-fx-padding: 8;" styleClass="btn-secondary" onAction="#handleCancel"/>

@@ -7,6 +7,8 @@ import com.finance.repository.AccountLogRepository;
 import com.finance.repository.AccountRepository;
 import com.finance.repository.AccountTypeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,13 +25,13 @@ public class AccountService {
     private final AccountLogRepository accountLogRepository;
 
     public Account createAccount(Long userId, String name, Long accountTypeId, BigDecimal initialBalance,
-                                 LocalDate maturityDate, BigDecimal installmentAmount, boolean showInGoals) {
+                                 LocalDate maturityDate, BigDecimal installmentAmount) {
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
         BigDecimal balance = initialBalance != null ? initialBalance : BigDecimal.ZERO;
         Account account = accountRepository.save(Account.builder()
                 .userId(userId).name(name).accountType(accountType).balance(balance)
-                .maturityDate(maturityDate).installmentAmount(installmentAmount).showInGoals(showInGoals).build());
+                .maturityDate(maturityDate).installmentAmount(installmentAmount).build());
         if (balance.compareTo(BigDecimal.ZERO) != 0) {
             accountLogRepository.save(AccountLog.builder()
                     .accountId(account.getId()).userId(userId)
@@ -51,7 +53,7 @@ public class AccountService {
     }
 
     public Account updateAccount(Long accountId, String name, Long accountTypeId, BigDecimal newBalance,
-                                 LocalDate maturityDate, BigDecimal installmentAmount, boolean showInGoals) {
+                                 LocalDate maturityDate, BigDecimal installmentAmount) {
         Account account = getAccountById(accountId);
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
@@ -61,7 +63,6 @@ public class AccountService {
         account.setBalance(newBalance);
         account.setMaturityDate(maturityDate);
         account.setInstallmentAmount(installmentAmount);
-        account.setShowInGoals(showInGoals);
         accountRepository.save(account);
         if (oldBalance.compareTo(newBalance) != 0) {
             BigDecimal diff = newBalance.subtract(oldBalance);
@@ -92,6 +93,10 @@ public class AccountService {
         return accountLogRepository.findByAccountIdOrderByCreatedAtDesc(accountId);
     }
 
+    public Page<AccountLog> getAccountLogsPage(List<Long> accountIds, Pageable pageable) {
+        return accountLogRepository.findByAccountIdInOrderByCreatedAtDescIdDesc(accountIds, pageable);
+    }
+
     public List<AccountLog> getAllLogsByUserId(Long userId) {
         return accountLogRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
@@ -102,12 +107,6 @@ public class AccountService {
 
     public BigDecimal getBalanceByAccountType(Long userId, AccountType accountType) {
         return accountRepository.sumBalanceByUserIdAndAccountType(userId, accountType);
-    }
-
-    public void setShowInGoals(Long accountId, boolean show) {
-        Account account = getAccountById(accountId);
-        account.setShowInGoals(show);
-        accountRepository.save(account);
     }
 
     public void updateAccountBalance(Long accountId, BigDecimal newBalance) {

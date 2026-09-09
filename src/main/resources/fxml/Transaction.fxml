@@ -7,8 +7,6 @@
       fx:controller="com.finance.controller.TransactionController"
       spacing="10" style="-fx-padding: 15;">
 
-    <Label text="Transactions" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
-
     <TabPane VBox.vgrow="ALWAYS">
 
         <Tab text="Record Transaction" closable="false">
@@ -53,10 +51,16 @@
 
                 <VBox spacing="6" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="Filter by Category:"/>
+                        <Label text="Category:"/>
                         <ComboBox fx:id="categoryFilterComboBox" prefWidth="180"/>
                         <Label text="Date:"/>
                         <DatePicker fx:id="dateFilter" prefWidth="140"/>
+                    </HBox>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Account:"/>
+                        <ComboBox fx:id="accountFilterComboBox" prefWidth="180"/>
+                        <Label text="Type:"/>
+                        <ComboBox fx:id="typeFilterComboBox" prefWidth="140"/>
                         <Button text="Clear" onAction="#handleClearFilters" styleClass="btn-secondary"/>
                     </HBox>
 
@@ -71,6 +75,15 @@
                         </columns>
                         <placeholder><Label text="No transactions yet"/></placeholder>
                     </TableView>
+
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button fx:id="txPrevPageBtn" text="◀ Prev" onAction="#handleTxPrevPage" styleClass="btn-secondary"/>
+                        <Label fx:id="txPageLabel" text="Page 1 of 1"/>
+                        <Button fx:id="txNextPageBtn" text="Next ▶" onAction="#handleTxNextPage" styleClass="btn-secondary"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="Rows per page:"/>
+                        <ComboBox fx:id="txPageSizeComboBox" prefWidth="80"/>
+                    </HBox>
                 </VBox>
 
             </HBox>

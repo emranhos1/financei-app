@@ -25,13 +25,26 @@ public class RegisterController {
     private PasswordField confirmPasswordField;
 
     @FXML
+    private TextField securityQuestionField;
+
+    @FXML
+    private TextField securityAnswerField;
+
+    @FXML
     public void handleRegister() {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
         String confirmPassword = confirmPasswordField.getText();
+        String securityQuestion = securityQuestionField.getText().trim();
+        String securityAnswer = securityAnswerField.getText().trim();
 
         if (username.isEmpty() || password.isEmpty()) {
             showAlert("Validation Error", "Please enter username and password");
+            return;
+        }
+
+        if (securityQuestion.isEmpty() || securityAnswer.isEmpty()) {
+            showAlert("Validation Error", "Please set a security question and answer - it's needed to reset your password later");
             return;
         }
 
@@ -60,7 +73,9 @@ public class RegisterController {
                     username,
                     password,
                     User.UserRole.user,
-                    User.UserStatus.inactive
+                    User.UserStatus.inactive,
+                    securityQuestion,
+                    securityAnswer
             );
             showAlert("Success", "Registration successful! Please wait for admin to activate your account.");
             close();

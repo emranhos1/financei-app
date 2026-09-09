@@ -46,6 +46,9 @@ public class Transaction {
     @Column
     private Long transferTypeId;
 
+    @Column
+    private Long loanId;
+
     @Column(length = 500)
     private String note;
 

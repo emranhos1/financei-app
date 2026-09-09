@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.chart.PieChart?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
@@ -16,43 +18,58 @@
 
     <Label text="Financial Summary" styleClass="page-title"/>
 
+    <HBox fx:id="loanReminderBanner" alignment="CENTER_LEFT" spacing="8" styleClass="dash-loan-toast" visible="false" managed="false">
+        <Label text="⚠" style="-fx-font-size: 14;"/>
+        <Label fx:id="loanReminderLabel" text="" wrapText="true" HBox.hgrow="ALWAYS"/>
+    </HBox>
+
     <!-- Row 1: account type balance cards, built dynamically in controller -->
     <HBox fx:id="balanceCardsBox" spacing="8"/>
 
-    <!-- Row 2: Net worth (28%) | Recent transactions (28%) | Expense ratio (22%) | Top expense (22%) -->
-    <GridPane hgap="12">
+    <!-- Row 2: Net worth (24%) | Recent transactions (24%) | Expense%/Top expense (24%) | Expense Breakdown (28%) -->
+    <GridPane hgap="10">
         <columnConstraints>
-            <ColumnConstraints percentWidth="28"/>
-            <ColumnConstraints percentWidth="28"/>
-            <ColumnConstraints percentWidth="22"/>
-            <ColumnConstraints percentWidth="22"/>
+            <ColumnConstraints percentWidth="24" minWidth="10"/>
+            <ColumnConstraints percentWidth="24" minWidth="10"/>
+            <ColumnConstraints percentWidth="24" minWidth="10"/>
+            <ColumnConstraints percentWidth="28" minWidth="10"/>
         </columnConstraints>
 
-        <VBox styleClass="dash-summary-card" spacing="4" GridPane.columnIndex="0" GridPane.rowIndex="0">
+        <VBox styleClass="dash-summary-card" spacing="4" minWidth="0" GridPane.columnIndex="0" GridPane.rowIndex="0">
             <Label text="Net worth" styleClass="dash-section-title"/>
             <Label text="Liquid balance — bank and cash type accounts" styleClass="dash-section-hint" wrapText="true"/>
             <Label fx:id="netWorthAmountLabel" text="৳ 0.00" styleClass="dash-networth-amount"/>
             <FlowPane fx:id="netWorthChipsBox" hgap="8" vgap="8"/>
         </VBox>
 
-        <VBox styleClass="dash-summary-card" spacing="4" GridPane.columnIndex="1" GridPane.rowIndex="0">
+        <VBox styleClass="dash-summary-card" spacing="4" minWidth="0" GridPane.columnIndex="1" GridPane.rowIndex="0">
             <Label text="Recent transactions" styleClass="dash-section-title"/>
             <VBox fx:id="recentTxBox" spacing="0"/>
         </VBox>
 
-        <VBox styleClass="dash-summary-card" spacing="3" alignment="CENTER" GridPane.columnIndex="2" GridPane.rowIndex="0">
-            <Label text="Expense % of Income" styleClass="dash-ring-sub" wrapText="true"
-                   alignment="CENTER" textAlignment="CENTER" maxWidth="140"/>
-            <StackPane fx:id="expenseRingStack" prefWidth="54" prefHeight="54" maxWidth="54" maxHeight="54">
-                <Label fx:id="expenseRingLabel" text="0%" styleClass="dash-ring-label"/>
-            </StackPane>
-            <Label text="MONTHLY" styleClass="dash-section-hint"/>
+        <VBox styleClass="dash-summary-card" spacing="6" minWidth="0" GridPane.columnIndex="2" GridPane.rowIndex="0">
+            <VBox spacing="3" alignment="CENTER">
+                <Label text="Expense % of Income" styleClass="dash-ring-sub" wrapText="true"
+                       alignment="CENTER" textAlignment="CENTER" maxWidth="140"/>
+                <StackPane fx:id="expenseRingStack" prefWidth="46" prefHeight="46" maxWidth="46" maxHeight="46">
+                    <Label fx:id="expenseRingLabel" text="0%" styleClass="dash-ring-label"/>
+                </StackPane>
+                <Label text="MONTHLY" styleClass="dash-section-hint"/>
+            </VBox>
+
+            <Separator/>
+
+            <VBox spacing="2">
+                <Label text="Top expense" styleClass="dash-top-expense-label"/>
+                <Label fx:id="topExpenseLabel" text="—" styleClass="dash-top-expense-value" wrapText="true"/>
+                <Label text="(BANK + CASH)" styleClass="dash-section-hint"/>
+            </VBox>
         </VBox>
 
-        <VBox styleClass="dash-summary-card" spacing="2" GridPane.columnIndex="3" GridPane.rowIndex="0">
-            <Label text="Top expense" styleClass="dash-top-expense-label"/>
-            <Label fx:id="topExpenseLabel" text="—" styleClass="dash-top-expense-value" wrapText="true"/>
-            <Label text="(BANK + CASH)" styleClass="dash-section-hint"/>
+        <VBox styleClass="dash-summary-card" spacing="2" minWidth="0" GridPane.columnIndex="3" GridPane.rowIndex="0">
+            <Label text="Expense Breakdown" styleClass="dash-section-title"/>
+            <PieChart fx:id="dashExpensePieChart" minWidth="0" minHeight="150" prefHeight="150"
+                      labelsVisible="true" legendVisible="false"/>
         </VBox>
     </GridPane>
 

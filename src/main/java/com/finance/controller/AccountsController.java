@@ -37,13 +37,11 @@ public class AccountsController {
     @FXML private TableColumn<Account, BigDecimal> balanceColumn;
     @FXML private TableColumn<Account, String> maturityColumn;
     @FXML private TableColumn<Account, String> installmentColumn;
-    @FXML private TableColumn<Account, String> goalCardColumn;
     @FXML private TextField nameField;
     @FXML private ComboBox<AccountType> typeComboBox;
     @FXML private TextField balanceField;
     @FXML private DatePicker maturityDatePicker;
     @FXML private TextField installmentField;
-    @FXML private CheckBox showInGoalsCheck;
     @FXML private Button accAddBtn;
     @FXML private HBox accEditButtons;
 
@@ -78,9 +76,6 @@ public class AccountsController {
             BigDecimal amt = cd.getValue().getInstallmentAmount();
             return new SimpleStringProperty(amt == null ? "—" : amt.toPlainString());
         });
-        goalCardColumn.setCellValueFactory(cd ->
-                new SimpleStringProperty(Boolean.TRUE.equals(cd.getValue().getShowInGoals()) ? "Yes" : "No"));
-
         typeComboBox.setConverter(new StringConverter<AccountType>() {
             public String toString(AccountType t) { return t == null ? "" : t.getName(); }
             public AccountType fromString(String s) { return null; }
@@ -93,7 +88,6 @@ public class AccountsController {
                 balanceField.setText(sel.getBalance().toPlainString());
                 maturityDatePicker.setValue(sel.getMaturityDate());
                 installmentField.setText(sel.getInstallmentAmount() != null ? sel.getInstallmentAmount().toPlainString() : "");
-                showInGoalsCheck.setSelected(Boolean.TRUE.equals(sel.getShowInGoals()));
                 accAddBtn.setVisible(false);
                 accAddBtn.setManaged(false);
                 accEditButtons.setVisible(true);
@@ -127,7 +121,7 @@ public class AccountsController {
             LocalDate maturityDate = maturityDatePicker.getValue();
             BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
             accountService.createAccount(sessionContext.getCurrentUserId(), name, type.getId(), new BigDecimal(balStr),
-                    maturityDate, installmentAmount, showInGoalsCheck.isSelected());
+                    maturityDate, installmentAmount);
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -149,8 +143,7 @@ public class AccountsController {
             BigDecimal balance = new BigDecimal(balStr);
             LocalDate maturityDate = maturityDatePicker.getValue();
             BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
-            accountService.updateAccount(sel.getId(), name, type.getId(), balance, maturityDate, installmentAmount,
-                    showInGoalsCheck.isSelected());
+            accountService.updateAccount(sel.getId(), name, type.getId(), balance, maturityDate, installmentAmount);
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -168,7 +161,7 @@ public class AccountsController {
 
     private void resetAccountForm() {
         nameField.clear(); balanceField.clear(); typeComboBox.setValue(null);
-        maturityDatePicker.setValue(null); installmentField.clear(); showInGoalsCheck.setSelected(false);
+        maturityDatePicker.setValue(null); installmentField.clear();
         accountsTable.getSelectionModel().clearSelection();
         accAddBtn.setVisible(true); accAddBtn.setManaged(true);
         accEditButtons.setVisible(false); accEditButtons.setManaged(false);

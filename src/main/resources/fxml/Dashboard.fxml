@@ -23,8 +23,7 @@
 
             <Button fx:id="dashboardBtn"   text="Dashboard"   styleClass="sidebar-btn"/>
             <Button fx:id="accountsBtn"    text="Accounts"    styleClass="sidebar-btn"/>
-            <Button fx:id="transactionBtn" text="Transactions" styleClass="sidebar-btn"/>
-            <Button fx:id="transferBtn"    text="Transfer"    styleClass="sidebar-btn"/>
+            <Button fx:id="transactionBtn" text="Transaction" styleClass="sidebar-btn"/>
             <Button fx:id="reportsBtn"     text="Reports"     styleClass="sidebar-btn"/>
             <Button fx:id="calculatorBtn"  text="Calculator"  styleClass="sidebar-btn"/>
             <Button fx:id="adminBtn"       text="Admin Panel" styleClass="sidebar-btn"/>
@@ -32,6 +31,7 @@
             <!-- Spacer pushes Logout to bottom -->
             <Region VBox.vgrow="ALWAYS"/>
 
+            <Button fx:id="changePasswordBtn" text="Change Password" styleClass="sidebar-btn"/>
             <Button fx:id="logoutBtn" text="Logout" styleClass="sidebar-btn"/>
         </VBox>
     </left>

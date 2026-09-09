@@ -4,15 +4,21 @@ import com.finance.context.SessionContext;
 import com.finance.entity.Account;
 import com.finance.entity.AccountType;
 import com.finance.entity.Category;
+import com.finance.entity.Loan;
 import com.finance.entity.MonthlyExpenseOverride;
 import com.finance.entity.Transaction;
 import com.finance.service.AccountService;
 import com.finance.service.AccountTypeService;
 import com.finance.service.CategoryService;
+import com.finance.service.LoanService;
 import com.finance.service.MonthlyExpenseOverrideService;
 import com.finance.service.TransactionService;
+import javafx.animation.PauseTransition;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.chart.PieChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -26,6 +32,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.StrokeLineCap;
+import javafx.util.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 
@@ -34,6 +41,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,11 +57,16 @@ public class DashboardHomeController {
     private final TransactionService transactionService;
     private final CategoryService categoryService;
     private final MonthlyExpenseOverrideService monthlyExpenseOverrideService;
+    private final LoanService loanService;
+    private final DashboardController dashboardController;
 
     private static final DateTimeFormatter TX_DATE_FMT = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH);
     private static final DateTimeFormatter FULL_MONTH_FMT = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
     private static final String[] BADGE_PALETTE = {"badge-teal", "badge-gold", "badge-blue", "badge-purple", "badge-rose", "badge-mint"};
+
+    @FXML private HBox loanReminderBanner;
+    @FXML private Label loanReminderLabel;
 
     @FXML private HBox balanceCardsBox;
 
@@ -65,6 +78,7 @@ public class DashboardHomeController {
     @FXML private StackPane expenseRingStack;
     @FXML private Label expenseRingLabel;
     @FXML private Label topExpenseLabel;
+    @FXML private PieChart dashExpensePieChart;
 
     @FXML private VBox cashMonthlyExpenseBox;
     @FXML private VBox bankMonthlyExpenseBox;
@@ -72,6 +86,38 @@ public class DashboardHomeController {
     @FXML
     public void initialize() {
         refreshDashboard();
+        showLoanReminderToast();
+        loanReminderBanner.setCursor(javafx.scene.Cursor.HAND);
+        loanReminderBanner.setOnMouseClicked(e -> dashboardController.goToLoansTab());
+    }
+
+    private void showLoanReminderToast() {
+        List<Loan> dueLoans = loanService.getDueSoonOrOverdueLoans(sessionContext.getCurrentUserId(), 3);
+        if (dueLoans.isEmpty()) {
+            loanReminderBanner.setVisible(false);
+            loanReminderBanner.setManaged(false);
+            return;
+        }
+
+        LocalDate today = LocalDate.now();
+        Loan first = dueLoans.get(0);
+        long daysDiff = ChronoUnit.DAYS.between(today, first.getDueDate());
+        String status = daysDiff < 0 ? "overdue by " + (-daysDiff) + " day(s)"
+                : daysDiff == 0 ? "due today"
+                : "due in " + daysDiff + " day(s)";
+        String message = dueLoans.size() == 1
+                ? "Loan with " + first.getPersonName() + " is " + status + " — check the Loans tab."
+                : dueLoans.size() + " loans are due soon or overdue — check the Loans tab.";
+        loanReminderLabel.setText(message);
+        loanReminderBanner.setVisible(true);
+        loanReminderBanner.setManaged(true);
+
+        PauseTransition pause = new PauseTransition(Duration.seconds(6));
+        pause.setOnFinished(e -> {
+            loanReminderBanner.setVisible(false);
+            loanReminderBanner.setManaged(false);
+        });
+        pause.play();
     }
 
     public void refreshDashboard() {
@@ -283,10 +329,16 @@ public class DashboardHomeController {
         List<Category> expenseCategories = categoryService.getExpenseCategories(userId);
         Category topCategory = null;
         BigDecimal topAmount = BigDecimal.ZERO;
+        ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
         for (Category c : expenseCategories) {
             BigDecimal amount = transactionService.getExpenseByCategoryForAccounts(userId, c.getId(), bankAndCashIds, monthStart, today);
+            if (amount.compareTo(BigDecimal.ZERO) > 0) {
+                pieData.add(new PieChart.Data(c.getName(), amount.doubleValue()));
+            }
             if (amount.compareTo(topAmount) > 0) { topAmount = amount; topCategory = c; }
         }
+        dashExpensePieChart.setData(pieData);
+
         if (topCategory == null) {
             topExpenseLabel.setText("No expense this month");
         } else {

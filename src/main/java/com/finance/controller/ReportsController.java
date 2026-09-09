@@ -10,10 +10,15 @@ import com.finance.service.TransactionService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 
 import java.io.File;
@@ -23,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +46,22 @@ public class ReportsController {
     @FXML private Label totalIncomeLabel;
     @FXML private Label totalExpenseLabel;
     @FXML private Label netIncomeLabel;
+
+    @FXML private LineChart<String, Number> trendChart;
+
+    @FXML private DatePicker compareAStartPicker;
+    @FXML private DatePicker compareAEndPicker;
+    @FXML private DatePicker compareBStartPicker;
+    @FXML private DatePicker compareBEndPicker;
+    @FXML private Label compareIncomeALabel;
+    @FXML private Label compareIncomeBLabel;
+    @FXML private Label compareIncomeChangeLabel;
+    @FXML private Label compareExpenseALabel;
+    @FXML private Label compareExpenseBLabel;
+    @FXML private Label compareExpenseChangeLabel;
+    @FXML private Label compareNetALabel;
+    @FXML private Label compareNetBLabel;
+    @FXML private Label compareNetChangeLabel;
 
     @FXML private TableView<CategoryRow> expenseCategoryTable;
     @FXML private TableColumn<CategoryRow, String> expCategoryNameColumn;
@@ -63,11 +85,18 @@ public class ReportsController {
     @FXML private TableColumn<AccountLog, BigDecimal> logBalanceBeforeColumn;
     @FXML private TableColumn<AccountLog, BigDecimal> logBalanceAfterColumn;
     @FXML private TableColumn<AccountLog, String> logNoteColumn;
+    @FXML private Button logPrevPageBtn;
+    @FXML private Button logNextPageBtn;
+    @FXML private Label logPageLabel;
+    @FXML private ComboBox<Integer> logPageSizeComboBox;
 
     private List<Account> allAccounts = new ArrayList<>();
     private final Map<Long, CheckMenuItem> accountLogCheckItems = new LinkedHashMap<>();
     private CheckMenuItem allAccountsLogItem;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final List<Integer> PAGE_SIZE_OPTIONS = Arrays.asList(5, 10, 20, 50, 100);
+    private int logCurrentPage = 0;
+    private int logTotalPages = 1;
 
     @FXML
     public void initialize() {
@@ -91,8 +120,94 @@ public class ReportsController {
         logChangeTypeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getChangeType().name()));
         logRefTypeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getReferenceType().name()));
 
+        logPageSizeComboBox.setItems(FXCollections.observableArrayList(PAGE_SIZE_OPTIONS));
+        logPageSizeComboBox.setValue(20);
+        logPageSizeComboBox.setOnAction(e -> loadAccountLogPage(0));
+
+        LocalDate thisMonthStart = today.withDayOfMonth(1);
+        LocalDate lastMonth = today.minusMonths(1);
+        compareAStartPicker.setValue(lastMonth.withDayOfMonth(1));
+        compareAEndPicker.setValue(lastMonth.withDayOfMonth(lastMonth.lengthOfMonth()));
+        compareBStartPicker.setValue(thisMonthStart);
+        compareBEndPicker.setValue(today.withDayOfMonth(today.lengthOfMonth()));
+
         loadReport();
         loadAccountLogDropdown();
+        loadTrendChart();
+        handleCompare();
+    }
+
+    @FXML
+    public void handleCompare() {
+        LocalDate aStart = compareAStartPicker.getValue();
+        LocalDate aEnd = compareAEndPicker.getValue();
+        LocalDate bStart = compareBStartPicker.getValue();
+        LocalDate bEnd = compareBEndPicker.getValue();
+        if (aStart == null || aEnd == null || bStart == null || bEnd == null) {
+            showAlert("Error", "Please select both periods' start and end dates"); return;
+        }
+
+        Long userId = sessionContext.getCurrentUserId();
+        BigDecimal incomeA = transactionService.getTotalIncome(userId, aStart, aEnd);
+        BigDecimal expenseA = transactionService.getTotalExpense(userId, aStart, aEnd);
+        BigDecimal netA = incomeA.subtract(expenseA);
+
+        BigDecimal incomeB = transactionService.getTotalIncome(userId, bStart, bEnd);
+        BigDecimal expenseB = transactionService.getTotalExpense(userId, bStart, bEnd);
+        BigDecimal netB = incomeB.subtract(expenseB);
+
+        compareIncomeALabel.setText(String.format("৳ %.2f", incomeA));
+        compareIncomeBLabel.setText(String.format("৳ %.2f", incomeB));
+        compareIncomeChangeLabel.setText(formatChange(incomeA, incomeB));
+
+        compareExpenseALabel.setText(String.format("৳ %.2f", expenseA));
+        compareExpenseBLabel.setText(String.format("৳ %.2f", expenseB));
+        compareExpenseChangeLabel.setText(formatChange(expenseA, expenseB));
+
+        compareNetALabel.setText(String.format("৳ %.2f", netA));
+        compareNetBLabel.setText(String.format("৳ %.2f", netB));
+        compareNetChangeLabel.setText(formatChange(netA, netB));
+    }
+
+    private String formatChange(BigDecimal from, BigDecimal to) {
+        if (from.compareTo(BigDecimal.ZERO) == 0) {
+            return to.compareTo(BigDecimal.ZERO) == 0 ? "0%" : "N/A";
+        }
+        BigDecimal percent = to.subtract(from).divide(from.abs(), 4, java.math.RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+        String sign = percent.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+        return sign + percent.setScale(1, java.math.RoundingMode.HALF_UP) + "%";
+    }
+
+    private void loadTrendChart() {
+        Long userId = sessionContext.getCurrentUserId();
+        XYChart.Series<String, Number> incomeSeries = new XYChart.Series<>();
+        incomeSeries.setName("Income");
+        XYChart.Series<String, Number> expenseSeries = new XYChart.Series<>();
+        expenseSeries.setName("Expense");
+
+        LocalDate now = LocalDate.now();
+        DateTimeFormatter monthFormat = DateTimeFormatter.ofPattern("MMM yyyy");
+        for (int i = 11; i >= 0; i--) {
+            LocalDate monthDate = now.minusMonths(i);
+            LocalDate monthStart = monthDate.withDayOfMonth(1);
+            LocalDate monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth());
+            String label = monthDate.format(monthFormat);
+
+            BigDecimal income = transactionService.getTotalIncome(userId, monthStart, monthEnd);
+            BigDecimal expense = transactionService.getTotalExpense(userId, monthStart, monthEnd);
+            incomeSeries.getData().add(new XYChart.Data<>(label, income));
+            expenseSeries.getData().add(new XYChart.Data<>(label, expense));
+        }
+        trendChart.getData().setAll(incomeSeries, expenseSeries);
+        if (incomeSeries.getNode() != null) incomeSeries.getNode().setStyle("-fx-stroke: #E74C3C; -fx-stroke-width: 2;");
+        if (expenseSeries.getNode() != null) expenseSeries.getNode().setStyle("-fx-stroke: #F39C12; -fx-stroke-width: 2; -fx-stroke-dash-array: 6 4;");
+        for (XYChart.Data<String, Number> data : incomeSeries.getData()) {
+            if (data.getNode() != null) data.getNode().setStyle("-fx-background-color: #E74C3C, white;");
+        }
+        for (XYChart.Data<String, Number> data : expenseSeries.getData()) {
+            if (data.getNode() != null) data.getNode().setStyle("-fx-background-color: #F39C12, white;");
+        }
     }
 
     @FXML
@@ -113,18 +228,24 @@ public class ReportsController {
         netIncomeLabel.setText(String.format("৳ %.2f", totalIncome.subtract(totalExpense)));
 
         List<CategoryRow> expenseRows = new ArrayList<>();
-        for (Category cat : categoryService.getExpenseCategories(userId))
-            expenseRows.add(new CategoryRow(cat.getName(), transactionService.getExpenseByCategory(userId, cat.getId(), startDate, endDate)));
+        for (Category cat : categoryService.getExpenseCategories(userId)) {
+            BigDecimal amount = transactionService.getExpenseByCategory(userId, cat.getId(), startDate, endDate);
+            if (amount.compareTo(BigDecimal.ZERO) != 0) expenseRows.add(new CategoryRow(cat.getName(), amount));
+        }
         expenseCategoryTable.setItems(FXCollections.observableArrayList(expenseRows));
 
         List<CategoryRow> incomeRows = new ArrayList<>();
-        for (Category cat : categoryService.getIncomeCategories(userId))
-            incomeRows.add(new CategoryRow(cat.getName(), transactionService.getIncomeByCategory(userId, cat.getId(), startDate, endDate)));
+        for (Category cat : categoryService.getIncomeCategories(userId)) {
+            BigDecimal amount = transactionService.getIncomeByCategory(userId, cat.getId(), startDate, endDate);
+            if (amount.compareTo(BigDecimal.ZERO) != 0) incomeRows.add(new CategoryRow(cat.getName(), amount));
+        }
         incomeCategoryTable.setItems(FXCollections.observableArrayList(incomeRows));
 
         List<AccountRow> accountRows = new ArrayList<>();
-        for (Account acc : accountService.getAccountsByUserId(userId))
-            accountRows.add(new AccountRow(acc.getName(), acc.getAccountType().getName(), acc.getBalance()));
+        for (Account acc : accountService.getAccountsByUserId(userId)) {
+            if (acc.getBalance().compareTo(BigDecimal.ZERO) != 0)
+                accountRows.add(new AccountRow(acc.getName(), acc.getAccountType().getName(), acc.getBalance()));
+        }
         accountTable.setItems(FXCollections.observableArrayList(accountRows));
     }
 
@@ -178,16 +299,43 @@ public class ReportsController {
         } else {
             accountLogMenuButton.setText(selected.size() + " accounts selected");
         }
-        loadAccountLog();
+        loadAccountLogPage(0);
     }
 
-    private void loadAccountLog() {
+    private void loadAccountLogPage(int page) {
         List<Account> selected = getSelectedLogAccounts();
-        if (selected.isEmpty()) { accountLogTable.setItems(FXCollections.observableArrayList()); return; }
-        List<AccountLog> combined = new ArrayList<>();
-        for (Account acc : selected) combined.addAll(accountService.getAccountLogs(acc.getId()));
-        combined.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
-        accountLogTable.setItems(FXCollections.observableArrayList(combined));
+        if (selected.isEmpty()) {
+            accountLogTable.setItems(FXCollections.observableArrayList());
+            logCurrentPage = 0;
+            logTotalPages = 1;
+            logPageLabel.setText("Page 0 of 0 (0 total)");
+            logPrevPageBtn.setDisable(true);
+            logNextPageBtn.setDisable(true);
+            return;
+        }
+        List<Long> accountIds = new ArrayList<>();
+        for (Account acc : selected) accountIds.add(acc.getId());
+
+        int pageSize = logPageSizeComboBox.getValue() != null ? logPageSizeComboBox.getValue() : 20;
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<AccountLog> result = accountService.getAccountLogsPage(accountIds, pageable);
+
+        logCurrentPage = result.getNumber();
+        logTotalPages = Math.max(result.getTotalPages(), 1);
+        accountLogTable.setItems(FXCollections.observableArrayList(result.getContent()));
+        logPageLabel.setText("Page " + (logCurrentPage + 1) + " of " + logTotalPages + " (" + result.getTotalElements() + " total)");
+        logPrevPageBtn.setDisable(logCurrentPage <= 0);
+        logNextPageBtn.setDisable(logCurrentPage >= logTotalPages - 1);
+    }
+
+    @FXML
+    public void handleLogPrevPage() {
+        if (logCurrentPage > 0) loadAccountLogPage(logCurrentPage - 1);
+    }
+
+    @FXML
+    public void handleLogNextPage() {
+        if (logCurrentPage < logTotalPages - 1) loadAccountLogPage(logCurrentPage + 1);
     }
 
     @FXML

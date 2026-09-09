@@ -11,17 +11,20 @@ import com.finance.service.TransferTypeService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -56,10 +59,19 @@ public class TransactionController {
     @FXML private TableColumn<Transaction, String> noteColumn;
     @FXML private ComboBox<Category> categoryFilterComboBox;
     @FXML private DatePicker dateFilter;
+    @FXML private ComboBox<Account> accountFilterComboBox;
+    @FXML private ComboBox<String> typeFilterComboBox;
+    @FXML private Button txPrevPageBtn;
+    @FXML private Button txNextPageBtn;
+    @FXML private Label txPageLabel;
+    @FXML private ComboBox<Integer> txPageSizeComboBox;
 
     private static final Category ALL_CATEGORIES_OPTION = Category.builder().id(null).name("All Categories").build();
+    private static final Account ALL_ACCOUNTS_OPTION = Account.builder().id(null).name("All Accounts").build();
+    private static final List<Integer> PAGE_SIZE_OPTIONS = Arrays.asList(5, 10, 20, 50, 100);
 
-    private FilteredList<Transaction> filteredTransactions;
+    private int txCurrentPage = 0;
+    private int txTotalPages = 1;
 
     @FXML private TableView<Category> categoriesTable;
     @FXML private TableColumn<Category, Long> catIdColumn;
@@ -83,6 +95,9 @@ public class TransactionController {
         datePicker.setValue(LocalDate.now());
 
         setupCategoryFilterComboBox();
+        txPageSizeComboBox.setItems(FXCollections.observableArrayList(PAGE_SIZE_OPTIONS));
+        txPageSizeComboBox.setValue(20);
+        txPageSizeComboBox.setOnAction(e -> loadTransactionsPage(0));
 
         catTypeComboBox.setItems(FXCollections.observableArrayList(Category.CategoryType.values()));
         catTypeComboBox.setConverter(new StringConverter<Category.CategoryType>() {
@@ -176,50 +191,82 @@ public class TransactionController {
             public String toString(Category c) { return c == null ? "" : c.getName(); }
             public Category fromString(String s) { return null; }
         });
-        categoryFilterComboBox.setOnAction(e -> applyFilters());
-        dateFilter.valueProperty().addListener((obs, o, n) -> applyFilters());
+        categoryFilterComboBox.setOnAction(e -> loadTransactionsPage(0));
+        dateFilter.valueProperty().addListener((obs, o, n) -> loadTransactionsPage(0));
+
+        accountFilterComboBox.setConverter(new StringConverter<Account>() {
+            public String toString(Account a) {
+                if (a == null) return "";
+                return a.getAccountType() == null ? a.getName() : a.getName() + " [" + a.getAccountType().getName() + "]";
+            }
+            public Account fromString(String s) { return null; }
+        });
+        accountFilterComboBox.setOnAction(e -> loadTransactionsPage(0));
+
+        typeFilterComboBox.setItems(FXCollections.observableArrayList("All Types", "INCOME", "EXPENSE"));
+        typeFilterComboBox.setValue("All Types");
+        typeFilterComboBox.setOnAction(e -> loadTransactionsPage(0));
     }
 
     private void loadTransactions() {
-        ObservableList<Transaction> allTransactions = FXCollections.observableArrayList(
-                transactionService.getTransactionsByUserId(sessionContext.getCurrentUserId()));
-        filteredTransactions = new FilteredList<>(allTransactions, tx -> true);
-        transactionsTable.setItems(filteredTransactions);
-
-        List<Category> userCategories = categoryService.getCategoriesByUserId(sessionContext.getCurrentUserId());
+        Long userId = sessionContext.getCurrentUserId();
+        List<Category> userCategories = categoryService.getCategoriesByUserId(userId);
         List<Category> filterOptions = new ArrayList<>();
         filterOptions.add(ALL_CATEGORIES_OPTION);
         filterOptions.addAll(userCategories);
         categoryFilterComboBox.setItems(FXCollections.observableArrayList(filterOptions));
         categoryFilterComboBox.setValue(ALL_CATEGORIES_OPTION);
-        applyFilters();
+
+        List<Account> accountOptions = new ArrayList<>();
+        accountOptions.add(ALL_ACCOUNTS_OPTION);
+        accountOptions.addAll(accountService.getAccountsByUserId(userId));
+        accountFilterComboBox.setItems(FXCollections.observableArrayList(accountOptions));
+        accountFilterComboBox.setValue(ALL_ACCOUNTS_OPTION);
+
+        loadTransactionsPage(0);
     }
 
-    private void applyFilters() {
-        if (filteredTransactions == null) return;
+    private void loadTransactionsPage(int page) {
         Category selectedCategory = categoryFilterComboBox.getValue();
+        Long categoryId = (selectedCategory != null && selectedCategory.getId() != null) ? selectedCategory.getId() : null;
         LocalDate selectedDate = dateFilter.getValue();
+        Account selectedAccount = accountFilterComboBox.getValue();
+        Long accountId = (selectedAccount != null && selectedAccount.getId() != null) ? selectedAccount.getId() : null;
+        String selectedTypeStr = typeFilterComboBox.getValue();
+        Transaction.TransactionType filterType = (selectedTypeStr == null || "All Types".equals(selectedTypeStr))
+                ? null : Transaction.TransactionType.valueOf(selectedTypeStr);
+        int pageSize = txPageSizeComboBox.getValue() != null ? txPageSizeComboBox.getValue() : 20;
 
-        filteredTransactions.setPredicate(tx -> {
-            if (tx.getType() == Transaction.TransactionType.TRANSFER) {
-                return false;
-            }
-            if (selectedCategory != null && selectedCategory.getId() != null
-                    && !selectedCategory.getId().equals(tx.getCategoryId())) {
-                return false;
-            }
-            if (selectedDate != null && !tx.getDate().isEqual(selectedDate)) {
-                return false;
-            }
-            return true;
-        });
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<Transaction> result = transactionService.getTransactionsPage(sessionContext.getCurrentUserId(),
+                Arrays.asList(Transaction.TransactionType.INCOME, Transaction.TransactionType.EXPENSE),
+                categoryId, selectedDate, accountId, filterType, pageable);
+
+        txCurrentPage = result.getNumber();
+        txTotalPages = Math.max(result.getTotalPages(), 1);
+        transactionsTable.setItems(FXCollections.observableArrayList(result.getContent()));
+        txPageLabel.setText("Page " + (txCurrentPage + 1) + " of " + txTotalPages + " (" + result.getTotalElements() + " total)");
+        txPrevPageBtn.setDisable(txCurrentPage <= 0);
+        txNextPageBtn.setDisable(txCurrentPage >= txTotalPages - 1);
+    }
+
+    @FXML
+    public void handleTxPrevPage() {
+        if (txCurrentPage > 0) loadTransactionsPage(txCurrentPage - 1);
+    }
+
+    @FXML
+    public void handleTxNextPage() {
+        if (txCurrentPage < txTotalPages - 1) loadTransactionsPage(txCurrentPage + 1);
     }
 
     @FXML
     public void handleClearFilters() {
         categoryFilterComboBox.setValue(ALL_CATEGORIES_OPTION);
         dateFilter.setValue(null);
-        applyFilters();
+        accountFilterComboBox.setValue(ALL_ACCOUNTS_OPTION);
+        typeFilterComboBox.setValue("All Types");
+        loadTransactionsPage(0);
     }
 
     private void populateFormForEdit(Transaction tx) {

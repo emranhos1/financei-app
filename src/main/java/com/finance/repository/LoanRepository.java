@@ -1,0 +1,14 @@
+package com.finance.repository;
+
+import com.finance.entity.Loan;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface LoanRepository extends JpaRepository<Loan, Long> {
+    List<Loan> findByUserIdOrderByLoanDateDesc(Long userId);
+    List<Loan> findByUserIdAndStatusOrderByLoanDateDesc(Long userId, Loan.LoanStatus status);
+    List<Loan> findByUserIdAndLoanPersonIdOrderByLoanDateDesc(Long userId, Long loanPersonId);
+}

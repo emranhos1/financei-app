@@ -3,9 +3,11 @@ package com.finance.controller;
 import com.finance.service.UserService;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -20,6 +22,18 @@ public class ForgotPasswordController {
     private TextField usernameField;
 
     @FXML
+    private Button findAccountBtn;
+
+    @FXML
+    private VBox resetBox;
+
+    @FXML
+    private Label securityQuestionLabel;
+
+    @FXML
+    private TextField securityAnswerField;
+
+    @FXML
     private PasswordField newPasswordField;
 
     @FXML
@@ -28,15 +42,53 @@ public class ForgotPasswordController {
     @FXML
     private Label messageLabel;
 
+    private String verifiedUsername = null;
+
+    @FXML
+    public void handleFindAccount() {
+        hideMessage();
+        resetBox.setVisible(false);
+        resetBox.setManaged(false);
+        verifiedUsername = null;
+
+        String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
+        if (username.isEmpty()) {
+            showMessage("Please enter your username.");
+            return;
+        }
+        if (!userService.userExists(username)) {
+            showMessage("No account found with that username.");
+            return;
+        }
+        String question = userService.getSecurityQuestion(username);
+        if (question == null || question.trim().isEmpty()) {
+            showMessage("No security question is set for this account yet. Ask the administrator to set one from Admin Panel.");
+            return;
+        }
+
+        verifiedUsername = username;
+        securityQuestionLabel.setText(question);
+        securityAnswerField.clear();
+        newPasswordField.clear();
+        confirmPasswordField.clear();
+        resetBox.setVisible(true);
+        resetBox.setManaged(true);
+    }
+
     @FXML
     public void handleResetPassword() {
         hideMessage();
 
-        String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
+        if (verifiedUsername == null) {
+            showMessage("Please find your account first.");
+            return;
+        }
+
+        String answer = securityAnswerField.getText() == null ? "" : securityAnswerField.getText();
         String newPassword = newPasswordField.getText() == null ? "" : newPasswordField.getText();
         String confirmPassword = confirmPasswordField.getText() == null ? "" : confirmPasswordField.getText();
 
-        if (username.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
+        if (answer.trim().isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
             showMessage("Please fill in all fields.");
             return;
         }
@@ -48,13 +100,13 @@ public class ForgotPasswordController {
             showMessage("Passwords do not match.");
             return;
         }
-        if (!userService.userExists(username)) {
-            showMessage("No account found with that username.");
+        if (!userService.verifySecurityAnswer(verifiedUsername, answer)) {
+            showMessage("Incorrect answer to the security question.");
             return;
         }
 
         try {
-            userService.resetPassword(username, newPassword);
+            userService.resetPassword(verifiedUsername, newPassword);
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Password Reset");
             alert.setHeaderText(null);

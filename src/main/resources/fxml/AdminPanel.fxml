@@ -2,6 +2,8 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
@@ -17,19 +19,45 @@
         <Button text="Deactivate User" onAction="#handleDeactivateUser" style="-fx-padding: 8;" styleClass="btn-accent"/>
     </HBox>
 
-    <TableView fx:id="usersTable" fixedCellSize="32" prefHeight="200" minHeight="200" maxHeight="200">
-        <columns>
-            <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
-            <TableColumn fx:id="usernameColumn" text="Username" prefWidth="200"/>
-            <TableColumn fx:id="roleColumn" text="Role" prefWidth="100"/>
-            <TableColumn fx:id="statusColumn" text="Status" prefWidth="100"/>
-        </columns>
-    </TableView>
+    <GridPane hgap="16">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="50" minWidth="10"/>
+            <ColumnConstraints percentWidth="50" minWidth="10"/>
+        </columnConstraints>
+
+        <TableView fx:id="usersTable" fixedCellSize="32" prefHeight="200" minHeight="200" maxHeight="200"
+                   maxWidth="Infinity" GridPane.columnIndex="0" GridPane.rowIndex="0">
+            <columns>
+                <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+                <TableColumn fx:id="usernameColumn" text="Username" prefWidth="200"/>
+                <TableColumn fx:id="roleColumn" text="Role" prefWidth="100"/>
+                <TableColumn fx:id="statusColumn" text="Status" prefWidth="100"/>
+            </columns>
+        </TableView>
+
+        <VBox styleClass="summary-card" spacing="10" minWidth="0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <Label text="Set Security Question (for selected user)" styleClass="card-title"/>
+            <Label text="Needed so the selected user can self-service reset their password from the Login screen's Forgot Password link. Select a user in the table above first."
+                   styleClass="card-label" wrapText="true"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <TextField fx:id="securityQuestionField" promptText="Security question" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="securityAnswerField" promptText="Answer" HBox.hgrow="ALWAYS"/>
+                <Button text="Set" onAction="#handleSetSecurityQuestion" styleClass="btn-primary"/>
+            </HBox>
+        </VBox>
+    </GridPane>
 
     <Label text="Backup &amp; Restore" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
 
-    <HBox spacing="16">
-        <VBox styleClass="summary-card" spacing="12" HBox.hgrow="ALWAYS">
+    <GridPane hgap="16">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="33.33" minWidth="10"/>
+            <ColumnConstraints percentWidth="33.33" minWidth="10"/>
+            <ColumnConstraints percentWidth="33.33" minWidth="10"/>
+        </columnConstraints>
+
+        <VBox styleClass="summary-card" spacing="12" minWidth="0" minHeight="230"
+              GridPane.columnIndex="0" GridPane.rowIndex="0">
             <Label text="Local Backup &amp; Restore" styleClass="card-title"/>
             <Label text="Export your data to a .sql file on this computer, or restore your database from a previously saved file."
                    styleClass="card-label" wrapText="true"/>
@@ -43,7 +71,8 @@
             <Label fx:id="localStatusLabel" text="" wrapText="true"/>
         </VBox>
 
-        <VBox styleClass="summary-card" spacing="12" HBox.hgrow="ALWAYS">
+        <VBox styleClass="summary-card" spacing="12" minWidth="0" minHeight="230"
+              GridPane.columnIndex="1" GridPane.rowIndex="0">
             <Label text="Google Drive Backup &amp; Restore" styleClass="card-title"/>
             <Label text="Connect your Google Drive account to upload a backup or restore the most recent one from the cloud."
                    styleClass="card-label" wrapText="true"/>
@@ -61,7 +90,22 @@
 
             <Label fx:id="driveStatusLabel" text="" wrapText="true"/>
         </VBox>
-    </HBox>
+
+        <VBox styleClass="summary-card" spacing="12" minWidth="0" minHeight="230"
+              GridPane.columnIndex="2" GridPane.rowIndex="0">
+            <Label text="Automatic Backup" styleClass="card-title"/>
+            <Label text="Only backs up (uploads) to Google Drive automatically on app startup, at the chosen interval - it never restores/imports automatically. Requires connecting Google Drive on the left at least once."
+                   styleClass="card-label" wrapText="true"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <CheckBox fx:id="autoBackupEnabledCheckBox" text="Enable automatic backup" onAction="#handleAutoBackupSettingChanged"/>
+            </HBox>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Every"/>
+                <ComboBox fx:id="autoBackupIntervalComboBox" prefWidth="110" onAction="#handleAutoBackupSettingChanged"/>
+            </HBox>
+            <Label fx:id="autoBackupLastRunLabel" text="Last auto backup: Never" wrapText="true"/>
+        </VBox>
+    </GridPane>
 
 </VBox>
 </ScrollPane>

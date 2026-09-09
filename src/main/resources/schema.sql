@@ -1,6 +1,13 @@
 CREATE DATABASE IF NOT EXISTS finance_db_v2;
 USE finance_db_v2;
 
+-- app_settings was briefly used to store the auto-backup checkbox in the database, but that was
+-- wrong: this database gets backed up/restored across machines, so a DB-stored setting would
+-- travel with a restore and show as enabled on a PC where the user never checked it. Auto-backup
+-- settings now live in a local properties file per machine instead (see AutoBackupService) - drop
+-- the table on any existing install that still has it (no-op on a fresh install).
+DROP TABLE IF EXISTS app_settings;
+
 CREATE TABLE IF NOT EXISTS users (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      username VARCHAR(50) UNIQUE NOT NULL,
@@ -10,6 +17,18 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     );
+
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'security_question'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE users ADD COLUMN security_question VARCHAR(255) NULL, ADD COLUMN security_answer_hash VARCHAR(255) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS account_types (
                                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -44,12 +63,14 @@ CREATE TABLE IF NOT EXISTS accounts (
     INDEX idx_user_id (user_id)
     );
 
+-- show_in_goals was added for a Dashboard "Goal accounts" card that has since been removed
+-- entirely; drop the column on any existing install that still has it (no-op on a fresh install).
 SET @col_exists = (
     SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounts' AND COLUMN_NAME = 'show_in_goals'
 );
-SET @alter_stmt = IF(@col_exists = 0,
-    'ALTER TABLE accounts ADD COLUMN show_in_goals BOOLEAN NOT NULL DEFAULT FALSE',
+SET @alter_stmt = IF(@col_exists > 0,
+    'ALTER TABLE accounts DROP COLUMN show_in_goals',
     'SELECT 1'
 );
 PREPARE stmt FROM @alter_stmt;
@@ -121,6 +142,100 @@ SET @col_exists = (
 );
 SET @alter_stmt = IF(@col_exists = 0,
     'ALTER TABLE monthly_expense_overrides ADD COLUMN is_manual BOOLEAN NOT NULL DEFAULT FALSE',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS loans (
+                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                     user_id BIGINT NOT NULL,
+                                     person_name VARCHAR(150) NOT NULL,
+    type ENUM('LENT', 'BORROWED') NOT NULL,
+    principal_amount DECIMAL(15, 2) NOT NULL,
+    account_id BIGINT NOT NULL,
+    loan_date DATE NOT NULL,
+    due_date DATE,
+    note VARCHAR(500),
+    status ENUM('OPEN', 'SETTLED') NOT NULL DEFAULT 'OPEN',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    INDEX idx_user_id (user_id)
+    );
+
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transactions' AND COLUMN_NAME = 'loan_id'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE transactions ADD COLUMN loan_id BIGINT NULL, ADD FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE SET NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loans' AND COLUMN_NAME = 'transfer_type_id'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE loans ADD COLUMN transfer_type_id BIGINT NULL, ADD FOREIGN KEY (transfer_type_id) REFERENCES transfer_types(id) ON DELETE SET NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loans' AND COLUMN_NAME = 'category_id'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE loans ADD COLUMN category_id BIGINT NULL, ADD FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- initial_transaction_id lets deleting a loan also reverse/delete the original lend/borrow
+-- transaction (previously only repayments were tagged, so deleting a loan silently left the
+-- account balance out of sync with what the loans table showed).
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loans' AND COLUMN_NAME = 'initial_transaction_id'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE loans ADD COLUMN initial_transaction_id BIGINT NULL, ADD FOREIGN KEY (initial_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- loan_persons is a "loan account" per person, so the same person can be picked from a dropdown
+-- across multiple loans over time instead of retyping their name (which used to create confusing
+-- duplicate-looking rows for the same person in the loans table).
+CREATE TABLE IF NOT EXISTS loan_persons (
+                                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                            user_id BIGINT NOT NULL,
+                                            name VARCHAR(150) NOT NULL,
+    note VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_loan_person (user_id, name)
+    );
+
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loans' AND COLUMN_NAME = 'loan_person_id'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE loans ADD COLUMN loan_person_id BIGINT NULL, ADD FOREIGN KEY (loan_person_id) REFERENCES loan_persons(id)',
     'SELECT 1'
 );
 PREPARE stmt FROM @alter_stmt;

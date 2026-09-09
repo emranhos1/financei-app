@@ -7,6 +7,15 @@
     -fx-font-family: "Nirmala UI", "Segoe UI", "Vrinda", "Noto Sans Bengali", sans-serif;
 }
 
+/* ===== LOAN REMINDER TOAST ===== */
+.dash-loan-toast {
+    -fx-background-color: #FFF3CD;
+    -fx-border-color: #E0A81C;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 8 12;
+}
+
 /* ===== SIDEBAR ===== */
 .sidebar {
     -fx-background-color: #1B5446;
