@@ -93,17 +93,14 @@
 
         <VBox styleClass="summary-card" spacing="12" minWidth="0" minHeight="230"
               GridPane.columnIndex="2" GridPane.rowIndex="0">
-            <Label text="Automatic Backup" styleClass="card-title"/>
-            <Label text="Only backs up (uploads) to Google Drive automatically on app startup, at the chosen interval - it never restores/imports automatically. Requires connecting Google Drive on the left at least once."
+            <Label text="Data Integrity" styleClass="card-title"/>
+            <Label text="Checks that every account's balance matches its transaction history, and that no transaction points to a loan that no longer exists. Read-only - never changes any data."
                    styleClass="card-label" wrapText="true"/>
             <HBox spacing="10" alignment="CENTER_LEFT">
-                <CheckBox fx:id="autoBackupEnabledCheckBox" text="Enable automatic backup" onAction="#handleAutoBackupSettingChanged"/>
+                <Button fx:id="verifyDataBtn" text="Verify Data" onAction="#handleVerifyData" styleClass="btn-primary"/>
             </HBox>
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Every"/>
-                <ComboBox fx:id="autoBackupIntervalComboBox" prefWidth="110" onAction="#handleAutoBackupSettingChanged"/>
-            </HBox>
-            <Label fx:id="autoBackupLastRunLabel" text="Last auto backup: Never" wrapText="true"/>
+            <TextArea fx:id="integrityReportArea" editable="false" wrapText="true" prefHeight="120"
+                      managed="false" visible="false"/>
         </VBox>
     </GridPane>
 

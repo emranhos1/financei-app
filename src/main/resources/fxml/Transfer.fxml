@@ -45,6 +45,17 @@
                 </VBox>
 
                 <VBox spacing="6" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Transfer Type:"/>
+                        <ComboBox fx:id="transferTypeFilterComboBox" prefWidth="160"/>
+                        <Label text="Date:"/>
+                        <DatePicker fx:id="dateFilter" prefWidth="140"/>
+                    </HBox>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Account:"/>
+                        <ComboBox fx:id="accountFilterComboBox" prefWidth="180"/>
+                        <Button text="Clear" onAction="#handleClearFilters" styleClass="btn-secondary"/>
+                    </HBox>
                     <TableView fx:id="transfersTable" VBox.vgrow="ALWAYS">
                         <columns>
                             <TableColumn fx:id="dateColumn"         text="Date"          prefWidth="95"/>

@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface AccountLogRepository extends JpaRepository<AccountLog, Long> {
     List<AccountLog> findByAccountIdOrderByCreatedAtDesc(Long accountId);
+    List<AccountLog> findByAccountIdOrderByIdAsc(Long accountId);
     List<AccountLog> findByUserIdOrderByCreatedAtDesc(Long userId);
     Page<AccountLog> findByAccountIdInOrderByCreatedAtDescIdDesc(List<Long> accountIds, Pageable pageable);
 }

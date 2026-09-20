@@ -55,6 +55,8 @@
                         <ComboBox fx:id="categoryFilterComboBox" prefWidth="180"/>
                         <Label text="Date:"/>
                         <DatePicker fx:id="dateFilter" prefWidth="140"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="Download Template" onAction="#handleDownloadImportTemplate" styleClass="btn-secondary"/>
                     </HBox>
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Label text="Account:"/>
@@ -62,6 +64,12 @@
                         <Label text="Type:"/>
                         <ComboBox fx:id="typeFilterComboBox" prefWidth="140"/>
                         <Button text="Clear" onAction="#handleClearFilters" styleClass="btn-secondary"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button fx:id="importCsvBtn" text="Import CSV" onAction="#handleImportTransactionsCSV" styleClass="btn-secondary">
+                            <tooltip>
+                                <Tooltip text="CSV columns (with header row): Date,Type,Account,Category,Amount,Note&#10;Date: yyyy-MM-dd    Type: INCOME or EXPENSE&#10;Account/Category must match existing names - click Download Template for a ready-to-fill example."/>
+                            </tooltip>
+                        </Button>
                     </HBox>
 
                     <TableView fx:id="transactionsTable" VBox.vgrow="ALWAYS">

@@ -3,6 +3,7 @@ package com.finance.service;
 import com.finance.entity.Account;
 import com.finance.entity.Transaction;
 import com.finance.repository.AccountRepository;
+import com.finance.repository.LoanRepository;
 import com.finance.repository.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ class TransactionServiceTest {
     @Mock private TransactionRepository transactionRepository;
     @Mock private AccountRepository accountRepository;
     @Mock private AccountService accountService;
+    @Mock private LoanRepository loanRepository;
 
     @InjectMocks
     private TransactionService transactionService;

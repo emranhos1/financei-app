@@ -15,9 +15,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +25,7 @@ import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,13 +80,13 @@ public class LoanController {
     @FXML private TextField personNameField;
     @FXML private TextArea personNoteArea;
     @FXML private Button addPersonBtn;
-    @FXML private HBox personEditButtons;
+    @FXML private VBox personEditButtons;
+    @FXML private ComboBox<LoanPerson> mergeTargetComboBox;
     @FXML private TableView<LoanPerson> personsTable;
     @FXML private TableColumn<LoanPerson, String> personListNameColumn;
     @FXML private TableColumn<LoanPerson, String> personListNoteColumn;
 
     private Loan selectedLoan = null;
-    private PersonSummary selectedPersonSummary = null;
     private LoanPerson selectedPersonForEdit = null;
 
     @FXML
@@ -165,7 +166,6 @@ public class LoanController {
 
         personsSummaryTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
             if (sel != null) {
-                selectedPersonSummary = sel;
                 historyTitleLabel.setText("History - " + sel.getPersonName());
                 loadHistoryForPerson(sel.getPersonId());
                 resetSelection();
@@ -191,6 +191,11 @@ public class LoanController {
         personListNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         personListNoteColumn.setCellValueFactory(new PropertyValueFactory<>("note"));
 
+        mergeTargetComboBox.setConverter(new StringConverter<LoanPerson>() {
+            public String toString(LoanPerson p) { return p == null ? "" : p.getName(); }
+            public LoanPerson fromString(String s) { return null; }
+        });
+
         personsTable.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
             if (sel != null) {
                 selectedPersonForEdit = sel;
@@ -200,6 +205,11 @@ public class LoanController {
                 addPersonBtn.setManaged(false);
                 personEditButtons.setVisible(true);
                 personEditButtons.setManaged(true);
+
+                List<LoanPerson> others = loanService.getLoanPersonsByUserId(sessionContext.getCurrentUserId());
+                others.removeIf(p -> p.getId().equals(sel.getId()));
+                mergeTargetComboBox.setItems(FXCollections.observableArrayList(others));
+                mergeTargetComboBox.setValue(null);
             }
         });
     }
@@ -252,7 +262,6 @@ public class LoanController {
         personsSummaryTable.setItems(FXCollections.observableArrayList(summaries));
         loansTable.getItems().clear();
         historyTitleLabel.setText("History");
-        selectedPersonSummary = null;
     }
 
     private void loadHistoryForPerson(Long loanPersonId) {
@@ -275,17 +284,90 @@ public class LoanController {
         if (person == null || account == null || amountStr.isEmpty() || date == null) {
             showAlert("Validation Error", "Person, Account, Date and Amount are required"); return;
         }
-        if (!confirm("Save this loan entry?")) return;
+        BigDecimal amount;
+        try {
+            amount = new BigDecimal(amountStr);
+        } catch (NumberFormatException e) {
+            showAlert("Validation Error", "Amount must be a valid number"); return;
+        }
+
+        Long transferTypeId = transferType == null ? null : transferType.getId();
+        Long categoryId = category == null ? null : category.getId();
+
+        // If this person already owes the opposite direction (e.g. saving "I Took" money while
+        // they still have open "I Gave" loans owed to the user), this payment is most likely
+        // settling that old debt rather than being an unrelated new loan - ask instead of silently
+        // creating a look-alike, unrelated loan next to debt that never gets marked repaid.
+        Loan.LoanType oppositeType = (type == Loan.LoanType.LENT) ? Loan.LoanType.BORROWED : Loan.LoanType.LENT;
+        List<Loan> openOpposite = new ArrayList<>();
+        for (Loan loan : loanService.getLoansByPerson(sessionContext.getCurrentUserId(), person.getId())) {
+            if (loan.getStatus() == Loan.LoanStatus.OPEN && loan.getType() == oppositeType) openOpposite.add(loan);
+        }
+
+        if (!openOpposite.isEmpty()) {
+            BigDecimal owed = BigDecimal.ZERO;
+            for (Loan loan : openOpposite) owed = owed.add(loanService.getRemaining(loan));
+
+            String debtDescription = (oppositeType == Loan.LoanType.LENT)
+                    ? person.getName() + " already owes you ৳ " + owed.toPlainString() + " from earlier loans."
+                    : "You already owe " + person.getName() + " ৳ " + owed.toPlainString() + " from earlier loans.";
+            String settleExplanation = (amount.compareTo(owed) > 0)
+                    ? "৳ " + owed.toPlainString() + " of this ৳ " + amount.toPlainString()
+                        + " would settle that, and the remaining ৳ " + amount.subtract(owed).toPlainString()
+                        + " would be recorded as a new loan."
+                    : "This whole ৳ " + amount.toPlainString() + " would go toward settling that instead of creating a new loan.";
+
+            ButtonType settleType = new ButtonType("Settle Debt First", ButtonBar.ButtonData.OK_DONE);
+            ButtonType newLoanType = new ButtonType("Record as New Loan", ButtonBar.ButtonData.OTHER);
+            Dialog<ButtonType> choiceDialog = new Dialog<>();
+            choiceDialog.setTitle("Existing Balance Found");
+            choiceDialog.getDialogPane().getButtonTypes().addAll(settleType, newLoanType, ButtonType.CANCEL);
+            Label choiceLabel = new Label(debtDescription + "\n\n" + settleExplanation);
+            choiceLabel.setWrapText(true);
+            choiceLabel.setMaxWidth(380);
+            VBox choiceContent = new VBox(choiceLabel);
+            choiceContent.setPadding(new Insets(10));
+            choiceDialog.getDialogPane().setContent(choiceContent);
+            choiceDialog.getDialogPane().setMinWidth(440);
+
+            Optional<ButtonType> choice = choiceDialog.showAndWait();
+            if (choice.isEmpty() || choice.get() == ButtonType.CANCEL) return;
+
+            if (choice.get() == settleType) {
+                try {
+                    LoanService.BulkSettlementResult settlement = loanService.recordBulkRepayment(
+                            sessionContext.getCurrentUserId(), person.getId(), oppositeType, amount, account.getId(),
+                            transferTypeId, categoryId, date, note);
+                    resetLoanForm();
+                    loadAccounts();
+                    loadPersonSummaries();
+                    loadHistoryForPerson(person.getId());
+
+                    StringBuilder msg = new StringBuilder("Settled " + settlement.getRepaidLoans().size() + " loan(s).");
+                    if (settlement.getNewLoanFromExcess() != null) {
+                        String owesWho = settlement.getNewLoanFromExcess().getType() == Loan.LoanType.BORROWED
+                                ? "you now owe them" : "they now owe you";
+                        msg.append("\n\n৳ ").append(settlement.getExcessAmount().toPlainString())
+                                .append(" was more than was owed, so it was recorded as a new loan - ")
+                                .append(owesWho).append(" ৳ ").append(settlement.getExcessAmount().toPlainString()).append(".");
+                    }
+                    showAlert("Success", msg.toString());
+                } catch (Exception e) {
+                    showAlert("Error", e.getMessage());
+                }
+                return;
+            }
+            // else: user chose "Record as New Loan" - fall through to the normal create-loan flow below
+        } else {
+            if (!confirm("Save this loan entry?")) return;
+        }
+
         try {
             loanService.createLoan(sessionContext.getCurrentUserId(), person.getId(), type,
-                    new BigDecimal(amountStr), account.getId(),
-                    transferType == null ? null : transferType.getId(),
-                    category == null ? null : category.getId(), date, dueDate, note);
+                    amount, account.getId(), transferTypeId, categoryId, date, dueDate, note);
             resetLoanForm();
             loadAccounts();
             loadPersonSummaries();
-        } catch (NumberFormatException e) {
-            showAlert("Validation Error", "Amount must be a valid number");
         } catch (Exception e) {
             showAlert("Error", e.getMessage());
         }
@@ -356,6 +438,45 @@ public class LoanController {
     }
 
     @FXML
+    public void handleUpdatePerson() {
+        if (selectedPersonForEdit == null) return;
+        String name = personNameField.getText().trim();
+        String note = personNoteArea.getText().trim();
+        if (name.isEmpty()) {
+            showAlert("Validation Error", "Name is required"); return;
+        }
+        if (!confirm("Update this loan account? Existing loans for this person will show the new name.")) return;
+        try {
+            loanService.updateLoanPerson(selectedPersonForEdit.getId(), sessionContext.getCurrentUserId(), name, note);
+            resetPersonSelection();
+            loadPersons();
+            loadPersonSummaries();
+        } catch (Exception e) {
+            showAlert("Error", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleMergePerson() {
+        if (selectedPersonForEdit == null) return;
+        LoanPerson target = mergeTargetComboBox.getValue();
+        if (target == null) {
+            showAlert("Validation Error", "Select a person to merge into"); return;
+        }
+        if (!confirm("Merge \"" + selectedPersonForEdit.getName() + "\" into \"" + target.getName()
+                + "\"? All of its loans will move to \"" + target.getName() + "\", and \""
+                + selectedPersonForEdit.getName() + "\" will be deleted.")) return;
+        try {
+            loanService.mergeLoanPersons(selectedPersonForEdit.getId(), target.getId(), sessionContext.getCurrentUserId());
+            resetPersonSelection();
+            loadPersons();
+            loadPersonSummaries();
+        } catch (Exception e) {
+            showAlert("Error", e.getMessage());
+        }
+    }
+
+    @FXML
     public void handleDeletePerson() {
         if (selectedPersonForEdit == null) return;
         if (!confirm("Delete this loan account?")) return;
@@ -414,12 +535,27 @@ public class LoanController {
 
     private boolean confirm(String msg) {
         Alert a = new Alert(Alert.AlertType.CONFIRMATION);
-        a.setTitle("Confirm"); a.setHeaderText(null); a.setContentText(msg);
+        a.setTitle("Confirm"); a.setHeaderText(null);
+        setWrappedContent(a, msg);
         Optional<ButtonType> r = a.showAndWait(); return r.isPresent() && r.get() == ButtonType.OK;
     }
 
     private void showAlert(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
+        a.setTitle(title); a.setHeaderText(null);
+        setWrappedContent(a, msg);
+        a.showAndWait();
+    }
+
+    /** Alert's default contentText can clip long or multi-line messages instead of resizing to fit -
+     *  using a wrapped Label as the dialog's content guarantees the full text is always visible. */
+    private void setWrappedContent(Alert alert, String msg) {
+        Label label = new Label(msg);
+        label.setWrapText(true);
+        label.setMaxWidth(380);
+        VBox content = new VBox(label);
+        content.setPadding(new Insets(10));
+        alert.getDialogPane().setContent(content);
+        alert.getDialogPane().setMinWidth(440);
     }
 }

@@ -28,4 +28,12 @@ public interface IGoogleDriveService {
      * @return the downloaded file
      */
     File downloadLatest(File targetFolder) throws Exception;
+
+    /**
+     * A ready-to-display description of the most recently uploaded backup in the app's Google
+     * Drive folder (e.g. "Last backup: 2026-09-20 11:21:32"), or "No backups found yet" if the
+     * folder is empty. Reads live from Drive rather than a local file, so it reflects the true
+     * latest backup even if it was uploaded from a different computer.
+     */
+    String getLatestBackupDisplay() throws Exception;
 }

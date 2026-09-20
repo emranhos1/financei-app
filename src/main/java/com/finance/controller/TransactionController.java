@@ -3,9 +3,11 @@ package com.finance.controller;
 import com.finance.context.SessionContext;
 import com.finance.entity.Account;
 import com.finance.entity.Category;
+import com.finance.entity.Loan;
 import com.finance.entity.Transaction;
 import com.finance.service.AccountService;
 import com.finance.service.CategoryService;
+import com.finance.service.LoanService;
 import com.finance.service.TransactionService;
 import com.finance.service.TransferTypeService;
 import javafx.beans.property.SimpleStringProperty;
@@ -15,6 +17,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
+import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,8 +25,17 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +49,7 @@ public class TransactionController {
     private final AccountService accountService;
     private final CategoryService categoryService;
     private final TransferTypeService transferTypeService;
+    private final LoanService loanService;
 
     @FXML private RadioButton incomeRadio;
     @FXML private RadioButton expenseRadio;
@@ -65,10 +78,12 @@ public class TransactionController {
     @FXML private Button txNextPageBtn;
     @FXML private Label txPageLabel;
     @FXML private ComboBox<Integer> txPageSizeComboBox;
+    @FXML private Button importCsvBtn;
 
     private static final Category ALL_CATEGORIES_OPTION = Category.builder().id(null).name("All Categories").build();
     private static final Account ALL_ACCOUNTS_OPTION = Account.builder().id(null).name("All Accounts").build();
     private static final List<Integer> PAGE_SIZE_OPTIONS = Arrays.asList(5, 10, 20, 50, 100);
+    private static final DateTimeFormatter IMPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private int txCurrentPage = 0;
     private int txTotalPages = 1;
@@ -269,6 +284,207 @@ public class TransactionController {
         loadTransactionsPage(0);
     }
 
+    /** Writes a ready-to-fill sample CSV using the user's own account/category names (so it
+     *  matches on import without any guessing) - answers "how do I know the format" without
+     *  requiring the user to read documentation. */
+    @FXML
+    public void handleDownloadImportTemplate() {
+        Long userId = sessionContext.getCurrentUserId();
+        List<Account> accounts = accountService.getAccountsByUserId(userId);
+        List<Category> expenseCategories = categoryService.getExpenseCategories(userId);
+        List<Category> incomeCategories = categoryService.getIncomeCategories(userId);
+
+        String accountName = accounts.isEmpty() ? "YourAccountName" : accounts.get(0).getName();
+        String expenseCategoryName = expenseCategories.isEmpty() ? "YourExpenseCategory" : expenseCategories.get(0).getName();
+        String incomeCategoryName = incomeCategories.isEmpty() ? "YourIncomeCategory" : incomeCategories.get(0).getName();
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Save Import Template");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+        chooser.setInitialFileName("transactions_import_template.csv");
+        File file = chooser.showSaveDialog(importCsvBtn.getScene().getWindow());
+        if (file == null) return;
+
+        try (OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
+            fw.write("﻿"); // UTF-8 BOM so Excel detects the encoding and renders Bengali/Unicode correctly
+            fw.write("Date,Type,Account,Category,Amount,Note\n");
+            fw.write(LocalDate.now().format(IMPORT_DATE_FORMAT) + ",EXPENSE," + csvEscape(accountName) + ","
+                    + csvEscape(expenseCategoryName) + ",500,Example expense - edit or delete this row\n");
+            fw.write(LocalDate.now().format(IMPORT_DATE_FORMAT) + ",INCOME," + csvEscape(accountName) + ","
+                    + csvEscape(incomeCategoryName) + ",5000,Example income - edit or delete this row\n");
+            showAlert("Success", "Template saved to " + file.getName()
+                    + "\n\nOpen it in Excel/Sheets, replace the example rows with your real data, save, then use Import CSV.");
+        } catch (IOException e) {
+            showAlert("Error", "Failed to save template: " + e.getMessage());
+        }
+    }
+
+    private String csvEscape(String value) {
+        return (value.contains(",") || value.contains("\"")) ? "\"" + value.replace("\"", "\"\"") + "\"" : value;
+    }
+
+    /** CSV format: Date,Type,Account,Category,Amount,Note (header row required). Date is
+     *  yyyy-MM-dd; Type is INCOME or EXPENSE; Account/Category are matched by name against the
+     *  user's existing ones (Category may be blank for uncategorized). Unmatched or malformed
+     *  rows are skipped and reported - never guessed or auto-created - and every valid row is
+     *  posted through the same {@link TransactionService#recordIncomeTransaction} /
+     *  {@link TransactionService#recordExpenseTransaction} used everywhere else, so balances stay
+     *  correct. */
+    @FXML
+    public void handleImportTransactionsCSV() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Import Transactions from CSV");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+        File file = chooser.showOpenDialog(saveTransactionBtn.getScene().getWindow());
+        if (file == null) return;
+
+        Long userId = sessionContext.getCurrentUserId();
+        List<Account> accounts = accountService.getAccountsByUserId(userId);
+        List<Category> incomeCategories = categoryService.getIncomeCategories(userId);
+        List<Category> expenseCategories = categoryService.getExpenseCategories(userId);
+
+        List<ImportRow> validRows = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+            String header = reader.readLine();
+            if (header == null) { showAlert("Error", "The file is empty"); return; }
+            if (!header.isEmpty() && header.charAt(0) == '﻿') header = header.substring(1); // strip UTF-8 BOM if Excel added one
+
+            String line;
+            int lineNumber = 1;
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                if (line.trim().isEmpty()) continue;
+                parseImportLine(line, lineNumber, accounts, incomeCategories, expenseCategories, validRows, skipped);
+            }
+        } catch (IOException e) {
+            showAlert("Error", "Failed to read file: " + e.getMessage()); return;
+        }
+
+        if (validRows.isEmpty() && skipped.isEmpty()) { showAlert("Error", "No data rows found in the file"); return; }
+        if (validRows.isEmpty()) {
+            showAlert("Nothing to Import", "All " + skipped.size() + " row(s) were skipped:\n\n" + String.join("\n", skipped));
+            return;
+        }
+
+        StringBuilder confirmMsg = new StringBuilder("Import ").append(validRows.size()).append(" transaction(s)?");
+        if (!skipped.isEmpty()) confirmMsg.append("\n\n").append(skipped.size()).append(" row(s) will be skipped.");
+        if (!confirm(confirmMsg.toString())) return;
+
+        int imported = 0;
+        for (ImportRow row : validRows) {
+            try {
+                if (row.type == Transaction.TransactionType.INCOME) {
+                    transactionService.recordIncomeTransaction(userId, row.date, row.amount, row.accountId, row.categoryId, row.note);
+                } else {
+                    transactionService.recordExpenseTransaction(userId, row.date, row.amount, row.accountId, row.categoryId, row.note);
+                }
+                imported++;
+            } catch (Exception e) {
+                skipped.add("Row for " + row.date + " ৳" + row.amount + ": " + e.getMessage());
+            }
+        }
+
+        loadTransactions();
+
+        StringBuilder summary = new StringBuilder("Imported ").append(imported).append(" transaction(s).");
+        if (!skipped.isEmpty()) {
+            summary.append("\n\nSkipped ").append(skipped.size()).append(" row(s):\n");
+            int shown = Math.min(skipped.size(), 10);
+            for (int i = 0; i < shown; i++) summary.append("- ").append(skipped.get(i)).append("\n");
+            if (skipped.size() > shown) summary.append("... and ").append(skipped.size() - shown).append(" more");
+        }
+        showAlert("Import Complete", summary.toString());
+    }
+
+    private void parseImportLine(String line, int lineNumber, List<Account> accounts,
+                                  List<Category> incomeCategories, List<Category> expenseCategories,
+                                  List<ImportRow> validRows, List<String> skipped) {
+        List<String> fields = parseCsvLine(line);
+        if (fields.size() < 5) {
+            skipped.add("Line " + lineNumber + ": expected at least 5 columns (Date,Type,Account,Category,Amount), got " + fields.size());
+            return;
+        }
+        String dateStr = fields.get(0).trim();
+        String typeStr = fields.get(1).trim().toUpperCase();
+        String accountName = fields.get(2).trim();
+        String categoryName = fields.get(3).trim();
+        String amountStr = fields.get(4).trim();
+        String note = fields.size() > 5 ? fields.get(5).trim() : "";
+
+        LocalDate date;
+        try {
+            date = LocalDate.parse(dateStr, IMPORT_DATE_FORMAT);
+        } catch (Exception e) {
+            skipped.add("Line " + lineNumber + ": invalid date \"" + dateStr + "\" (expected yyyy-MM-dd)"); return;
+        }
+
+        Transaction.TransactionType type;
+        if ("INCOME".equals(typeStr)) type = Transaction.TransactionType.INCOME;
+        else if ("EXPENSE".equals(typeStr)) type = Transaction.TransactionType.EXPENSE;
+        else { skipped.add("Line " + lineNumber + ": type must be INCOME or EXPENSE, got \"" + typeStr + "\""); return; }
+
+        Account account = accounts.stream().filter(a -> a.getName().equalsIgnoreCase(accountName)).findFirst().orElse(null);
+        if (account == null) { skipped.add("Line " + lineNumber + ": unknown account \"" + accountName + "\""); return; }
+
+        Long categoryId = null;
+        if (!categoryName.isEmpty()) {
+            List<Category> pool = type == Transaction.TransactionType.INCOME ? incomeCategories : expenseCategories;
+            Category category = pool.stream().filter(c -> c.getName().equalsIgnoreCase(categoryName)).findFirst().orElse(null);
+            if (category == null) {
+                skipped.add("Line " + lineNumber + ": unknown " + typeStr.toLowerCase() + " category \"" + categoryName + "\""); return;
+            }
+            categoryId = category.getId();
+        }
+
+        BigDecimal amount;
+        try {
+            amount = new BigDecimal(amountStr);
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            skipped.add("Line " + lineNumber + ": invalid amount \"" + amountStr + "\""); return;
+        }
+
+        validRows.add(new ImportRow(type, date, amount, account.getId(), categoryId, note));
+    }
+
+    /** Minimal quoted-CSV field splitter - handles a comma inside a quoted Note field. */
+    private List<String> parseCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') { current.append('"'); i++; }
+                    else inQuotes = false;
+                } else current.append(c);
+            } else {
+                if (c == '"') inQuotes = true;
+                else if (c == ',') { fields.add(current.toString()); current.setLength(0); }
+                else current.append(c);
+            }
+        }
+        fields.add(current.toString());
+        return fields;
+    }
+
+    private static class ImportRow {
+        final Transaction.TransactionType type;
+        final LocalDate date;
+        final BigDecimal amount;
+        final Long accountId;
+        final Long categoryId;
+        final String note;
+
+        ImportRow(Transaction.TransactionType type, LocalDate date, BigDecimal amount, Long accountId, Long categoryId, String note) {
+            this.type = type; this.date = date; this.amount = amount;
+            this.accountId = accountId; this.categoryId = categoryId; this.note = note;
+        }
+    }
+
     private void populateFormForEdit(Transaction tx) {
         selectedTransaction = tx;
         if (tx.getType() == Transaction.TransactionType.INCOME) {
@@ -333,7 +549,17 @@ public class TransactionController {
         if (type == null || date == null || amountStr.isEmpty() || account == null || category == null) {
             showAlert("Validation Error", "Type, Date, Account, Category and Amount are required"); return;
         }
-        if (!confirm("Update this transaction?")) return;
+
+        Optional<Loan> asInitiating = loanService.findLoanByInitialTransactionId(selectedTransaction.getId());
+        if (asInitiating.isPresent()) {
+            showAlert("Cannot Edit Here", "This transaction was created by a loan (" + asInitiating.get().getPersonName()
+                    + "). Edit or delete it from the Loans tab instead, so the loan record stays in sync.");
+            return;
+        }
+        String confirmMsg = (selectedTransaction.getLoanId() != null)
+                ? "This transaction is a loan repayment. Changing its amount will change how much remains on that loan.\n\nContinue?"
+                : "Update this transaction?";
+        if (!confirm(confirmMsg)) return;
         try {
             BigDecimal amount = new BigDecimal(amountStr);
             Long categoryId = category.getId();
@@ -348,7 +574,24 @@ public class TransactionController {
     @FXML
     public void handleDeleteTransaction() {
         if (selectedTransaction == null) return;
-        if (!confirm("Delete this transaction? The account balance will be reversed.")) return;
+
+        Optional<Loan> asInitiating = loanService.findLoanByInitialTransactionId(selectedTransaction.getId());
+        if (asInitiating.isPresent()) {
+            showAlert("Cannot Delete Here", "This transaction was created by a loan (" + asInitiating.get().getPersonName()
+                    + "). Delete it from the Loans tab instead, so the loan record is removed too instead of being left behind.");
+            return;
+        }
+
+        String confirmMsg = "Delete this transaction? The account balance will be reversed.";
+        if (selectedTransaction.getLoanId() != null) {
+            Loan loan = loanService.getLoanById(selectedTransaction.getLoanId());
+            confirmMsg = "This transaction is a loan repayment for " + loan.getPersonName() + ". Deleting it will undo that "
+                    + "repayment - the loan's remaining balance will increase back by ৳ " + selectedTransaction.getAmount().toPlainString()
+                    + (loan.getStatus() == Loan.LoanStatus.SETTLED ? ", and the loan will reopen as unsettled." : ".")
+                    + "\n\nContinue?";
+        }
+        if (!confirm(confirmMsg)) return;
+
         try {
             transactionService.deleteTransaction(selectedTransaction.getId(), sessionContext.getCurrentUserId());
             resetTransactionForm();
@@ -448,12 +691,27 @@ public class TransactionController {
 
     private boolean confirm(String msg) {
         Alert a = new Alert(Alert.AlertType.CONFIRMATION);
-        a.setTitle("Confirm"); a.setHeaderText(null); a.setContentText(msg);
+        a.setTitle("Confirm"); a.setHeaderText(null);
+        setWrappedContent(a, msg);
         Optional<ButtonType> r = a.showAndWait(); return r.isPresent() && r.get() == ButtonType.OK;
     }
 
     private void showAlert(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
+        a.setTitle(title); a.setHeaderText(null);
+        setWrappedContent(a, msg);
+        a.showAndWait();
+    }
+
+    /** Alert's default contentText can clip long or multi-line messages instead of resizing to fit -
+     *  using a wrapped Label as the dialog's content guarantees the full text is always visible. */
+    private void setWrappedContent(Alert alert, String msg) {
+        Label label = new Label(msg);
+        label.setWrapText(true);
+        label.setMaxWidth(380);
+        HBox content = new HBox(label);
+        content.setStyle("-fx-padding: 10;");
+        alert.getDialogPane().setContent(content);
+        alert.getDialogPane().setMinWidth(440);
     }
 }

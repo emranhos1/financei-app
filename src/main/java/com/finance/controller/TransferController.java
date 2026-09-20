@@ -22,6 +22,7 @@ import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +44,10 @@ public class TransferController {
     @FXML private Button saveTransferBtn;
     @FXML private HBox txEditButtons;
 
+    @FXML private ComboBox<TransferType> transferTypeFilterComboBox;
+    @FXML private ComboBox<Account> accountFilterComboBox;
+    @FXML private DatePicker dateFilter;
+
     @FXML private TableView<Transaction> transfersTable;
     @FXML private TableColumn<Transaction, LocalDate> dateColumn;
     @FXML private TableColumn<Transaction, String> typeColumn;
@@ -57,6 +62,8 @@ public class TransferController {
     @FXML private ComboBox<Integer> trPageSizeComboBox;
 
     private static final List<Integer> PAGE_SIZE_OPTIONS = Arrays.asList(5, 10, 20, 50, 100);
+    private static final TransferType ALL_TRANSFER_TYPES_OPTION = TransferType.builder().id(null).name("All Transfer Types").build();
+    private static final Account ALL_ACCOUNTS_OPTION = Account.builder().id(null).name("All Accounts").build();
     private int trCurrentPage = 0;
     private int trTotalPages = 1;
 
@@ -99,6 +106,23 @@ public class TransferController {
             public String toString(TransferType t) { return t == null ? "" : t.getName(); }
             public TransferType fromString(String s) { return null; }
         });
+
+        transferTypeFilterComboBox.setConverter(new StringConverter<TransferType>() {
+            public String toString(TransferType t) { return t == null ? "" : t.getName(); }
+            public TransferType fromString(String s) { return null; }
+        });
+        transferTypeFilterComboBox.setOnAction(e -> loadTransfersPage(0));
+
+        accountFilterComboBox.setConverter(new StringConverter<Account>() {
+            public String toString(Account a) {
+                if (a == null) return "";
+                return a.getAccountType() == null ? a.getName() : a.getName() + " [" + a.getAccountType().getName() + "]";
+            }
+            public Account fromString(String s) { return null; }
+        });
+        accountFilterComboBox.setOnAction(e -> loadTransfersPage(0));
+
+        dateFilter.valueProperty().addListener((obs, o, n) -> loadTransfersPage(0));
     }
 
     private void setupTable() {
@@ -158,12 +182,27 @@ public class TransferController {
         List<Account> accounts = accountService.getAccountsByUserId(sessionContext.getCurrentUserId());
         fromAccountComboBox.setItems(FXCollections.observableArrayList(accounts));
         toAccountComboBox.setItems(FXCollections.observableArrayList(accounts));
+
+        Account currentFilter = accountFilterComboBox.getValue();
+        List<Account> filterOptions = new ArrayList<>();
+        filterOptions.add(ALL_ACCOUNTS_OPTION);
+        filterOptions.addAll(accounts);
+        accountFilterComboBox.setItems(FXCollections.observableArrayList(filterOptions));
+        accountFilterComboBox.setValue(currentFilter != null ? currentFilter : ALL_ACCOUNTS_OPTION);
     }
 
     private void loadTransfersPage(int page) {
         int pageSize = trPageSizeComboBox.getValue() != null ? trPageSizeComboBox.getValue() : 20;
         Pageable pageable = PageRequest.of(page, pageSize);
-        Page<Transaction> result = transactionService.getTransfersPage(sessionContext.getCurrentUserId(), pageable);
+
+        TransferType selectedType = transferTypeFilterComboBox.getValue();
+        Long transferTypeId = (selectedType != null && selectedType.getId() != null) ? selectedType.getId() : null;
+        Account selectedAccount = accountFilterComboBox.getValue();
+        Long accountId = (selectedAccount != null && selectedAccount.getId() != null) ? selectedAccount.getId() : null;
+        LocalDate selectedDate = dateFilter.getValue();
+
+        Page<Transaction> result = transactionService.getTransfersPage(sessionContext.getCurrentUserId(),
+                transferTypeId, selectedDate, accountId, pageable);
 
         trCurrentPage = result.getNumber();
         trTotalPages = Math.max(result.getTotalPages(), 1);
@@ -272,6 +311,21 @@ public class TransferController {
         List<TransferType> types = transferTypeService.getTransferTypesByUserId(sessionContext.getCurrentUserId());
         transferTypeComboBox.setItems(FXCollections.observableArrayList(types));
         typesTable.setItems(FXCollections.observableArrayList(types));
+
+        TransferType currentFilter = transferTypeFilterComboBox.getValue();
+        List<TransferType> filterOptions = new ArrayList<>();
+        filterOptions.add(ALL_TRANSFER_TYPES_OPTION);
+        filterOptions.addAll(types);
+        transferTypeFilterComboBox.setItems(FXCollections.observableArrayList(filterOptions));
+        transferTypeFilterComboBox.setValue(currentFilter != null ? currentFilter : ALL_TRANSFER_TYPES_OPTION);
+    }
+
+    @FXML
+    public void handleClearFilters() {
+        transferTypeFilterComboBox.setValue(ALL_TRANSFER_TYPES_OPTION);
+        accountFilterComboBox.setValue(ALL_ACCOUNTS_OPTION);
+        dateFilter.setValue(null);
+        loadTransfersPage(0);
     }
 
     @FXML public void handleAddType() {

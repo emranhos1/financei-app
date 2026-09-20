@@ -2,8 +2,10 @@ package com.finance.service;
 
 import com.finance.entity.Account;
 import com.finance.entity.AccountLog;
+import com.finance.entity.Loan;
 import com.finance.entity.Transaction;
 import com.finance.repository.AccountRepository;
+import com.finance.repository.LoanRepository;
 import com.finance.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +25,7 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final AccountService accountService;
+    private final LoanRepository loanRepository;
 
     public Transaction recordIncomeTransaction(Long userId, LocalDate date, BigDecimal amount,
                                                Long toAccountId, Long categoryId, String note) {
@@ -119,6 +122,10 @@ public class TransactionService {
         Transaction tx = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
         if (!tx.getUserId().equals(userId)) throw new IllegalArgumentException("Access denied");
+        loanRepository.findByInitialTransactionId(transactionId).ifPresent(loan -> {
+            throw new IllegalArgumentException("This transaction was created by a loan (" + loan.getPersonName()
+                    + "). Edit or delete it from the Loans tab instead, so the loan record stays in sync.");
+        });
 
         BigDecimal diff = newAmount.subtract(tx.getAmount());
 
@@ -166,13 +173,19 @@ public class TransactionService {
         tx.setCategoryId(categoryId);
         tx.setTransferTypeId(transferTypeId);
         tx.setNote(note);
-        return transactionRepository.save(tx);
+        Transaction saved = transactionRepository.save(tx);
+        syncLoanStatus(saved.getLoanId());
+        return saved;
     }
 
     public void deleteTransaction(Long transactionId, Long userId) {
         Transaction tx = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
         if (!tx.getUserId().equals(userId)) throw new IllegalArgumentException("Access denied");
+        loanRepository.findByInitialTransactionId(transactionId).ifPresent(loan -> {
+            throw new IllegalArgumentException("This transaction was created by a loan (" + loan.getPersonName()
+                    + "). Delete it from the Loans tab instead, so the loan record is removed too instead of being left behind.");
+        });
 
         if (tx.getType() == Transaction.TransactionType.INCOME && tx.getToAccountId() != null) {
             accountRepository.findById(tx.getToAccountId()).ifPresent(acc -> {
@@ -206,7 +219,26 @@ public class TransactionService {
                         AccountLog.ChangeType.DEBIT, AccountLog.ReferenceType.TRANSFER, transactionId, "Transaction deleted");
             });
         }
+        Long linkedLoanId = tx.getLoanId();
         transactionRepository.deleteById(transactionId);
+        syncLoanStatus(linkedLoanId);
+    }
+
+    /** Keeps a loan's stored OPEN/SETTLED status consistent with its actual remaining balance
+     *  whenever one of its repayment transactions is edited or deleted directly from the
+     *  Transaction tab - otherwise a loan could stay stuck SETTLED after a repayment that made it
+     *  0 is edited down or removed, or stay OPEN after an edit that now fully covers it. */
+    private void syncLoanStatus(Long loanId) {
+        if (loanId == null) return;
+        loanRepository.findById(loanId).ifPresent(loan -> {
+            BigDecimal remaining = loan.getPrincipalAmount().subtract(transactionRepository.sumAmountByLoanId(loanId));
+            Loan.LoanStatus correctStatus = remaining.compareTo(BigDecimal.ZERO) <= 0
+                    ? Loan.LoanStatus.SETTLED : Loan.LoanStatus.OPEN;
+            if (loan.getStatus() != correctStatus) {
+                loan.setStatus(correctStatus);
+                loanRepository.save(loan);
+            }
+        });
     }
 
     /** Tags a transaction (typically a loan repayment) as belonging to a loan, so the loan's
@@ -241,8 +273,8 @@ public class TransactionService {
         return transactionRepository.findTransactionsPage(userId, types, categoryId, date, accountId, filterType, pageable);
     }
 
-    public Page<Transaction> getTransfersPage(Long userId, Pageable pageable) {
-        return transactionRepository.findByUserIdAndTypeOrderByDateDescIdDesc(userId, Transaction.TransactionType.TRANSFER, pageable);
+    public Page<Transaction> getTransfersPage(Long userId, Long transferTypeId, LocalDate date, Long accountId, Pageable pageable) {
+        return transactionRepository.findTransfersPage(userId, Transaction.TransactionType.TRANSFER, transferTypeId, date, accountId, pageable);
     }
 
     public List<Transaction> getTransactionsByDateRange(Long userId, LocalDate startDate, LocalDate endDate) {

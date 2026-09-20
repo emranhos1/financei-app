@@ -1,7 +1,7 @@
 package com.finance.controller;
 
 import com.finance.entity.User;
-import com.finance.service.AutoBackupService;
+import com.finance.service.DataIntegrityService;
 import com.finance.service.IBackupService;
 import com.finance.service.IGoogleDriveService;
 import com.finance.service.UserService;
@@ -29,7 +29,7 @@ public class AdminPanelController {
     private final UserService userService;
     private final IBackupService backupService;
     private final IGoogleDriveService googleDriveService;
-    private final AutoBackupService autoBackupService;
+    private final DataIntegrityService dataIntegrityService;
 
     @FXML
     private TableView<User> usersTable;
@@ -61,9 +61,8 @@ public class AdminPanelController {
     @FXML private Label driveStatusLabel;
     @FXML private ProgressIndicator driveProgress;
 
-    @FXML private CheckBox autoBackupEnabledCheckBox;
-    @FXML private ComboBox<Integer> autoBackupIntervalComboBox;
-    @FXML private Label autoBackupLastRunLabel;
+    @FXML private Button verifyDataBtn;
+    @FXML private TextArea integrityReportArea;
 
     private interface BackgroundAction {
         String run() throws Exception;
@@ -77,29 +76,6 @@ public class AdminPanelController {
         localProgress.setVisible(false);
         driveProgress.setVisible(false);
         refreshDriveButtons();
-
-        setupAutoBackupControls();
-    }
-
-    private void setupAutoBackupControls() {
-        autoBackupIntervalComboBox.setItems(FXCollections.observableArrayList(1, 7));
-        autoBackupIntervalComboBox.setConverter(new javafx.util.StringConverter<Integer>() {
-            @Override public String toString(Integer days) {
-                return days == null ? "" : (days == 1 ? "Day" : "Week");
-            }
-            @Override public Integer fromString(String s) { return null; }
-        });
-
-        autoBackupEnabledCheckBox.setSelected(autoBackupService.isEnabled());
-        autoBackupIntervalComboBox.setValue(autoBackupService.getIntervalDays());
-        autoBackupLastRunLabel.setText("Last auto backup: " + autoBackupService.getLastRunDisplay());
-    }
-
-    @FXML
-    public void handleAutoBackupSettingChanged() {
-        autoBackupService.setEnabled(autoBackupEnabledCheckBox.isSelected());
-        Integer interval = autoBackupIntervalComboBox.getValue();
-        autoBackupService.setIntervalDays(interval != null ? interval : 1);
     }
 
     private void setupTable() {
@@ -205,7 +181,7 @@ public class AdminPanelController {
         Timeline countdown = startConnectCountdown();
         runInBackground(driveProgress, driveStatusLabel,
                 new Button[]{connectDriveBtn, disconnectDriveBtn, uploadDriveBtn, downloadDriveBtn},
-                () -> { googleDriveService.connect(); return "Connected to Google Drive"; },
+                () -> { googleDriveService.connect(); return "Connected to Google Drive. " + googleDriveService.getLatestBackupDisplay(); },
                 countdown);
     }
 
@@ -250,7 +226,8 @@ public class AdminPanelController {
                 () -> {
                     File tempDir = new File(System.getProperty("java.io.tmpdir"));
                     String localPath = backupService.exportToLocal(tempDir);
-                    return googleDriveService.upload(new File(localPath));
+                    String uploadResult = googleDriveService.upload(new File(localPath));
+                    return uploadResult + ". " + googleDriveService.getLatestBackupDisplay();
                 });
     }
 
@@ -311,6 +288,18 @@ public class AdminPanelController {
         Thread thread = new Thread(task, "backup-restore-task");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    @FXML
+    public void handleVerifyData() {
+        List<String> issues = dataIntegrityService.runFullCheck();
+        integrityReportArea.setManaged(true);
+        integrityReportArea.setVisible(true);
+        if (issues.isEmpty()) {
+            integrityReportArea.setText("All checks passed - no issues found.");
+        } else {
+            integrityReportArea.setText(String.join("\n\n", issues));
+        }
     }
 
     private void refreshDriveButtons() {

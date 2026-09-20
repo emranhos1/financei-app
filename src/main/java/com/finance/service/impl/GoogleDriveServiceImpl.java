@@ -30,6 +30,10 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -52,6 +56,7 @@ public class GoogleDriveServiceImpl implements IGoogleDriveService {
     private static final String APP_FOLDER_NAME = "finance_app";
     private static final String FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
     private static final int SIGN_IN_TIMEOUT_SECONDS = 60;
+    private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private Drive driveService;
     private Credential currentCredential;
@@ -160,6 +165,28 @@ public class GoogleDriveServiceImpl implements IGoogleDriveService {
             driveService.files().get(latest.getId()).executeMediaAndDownloadTo(out);
         }
         return outputFile;
+    }
+
+    @Override
+    public String getLatestBackupDisplay() throws Exception {
+        ensureConnected();
+        String folderId = getOrCreateAppFolderId();
+
+        FileList result = driveService.files().list()
+                .setQ("'" + folderId + "' in parents and name contains '" + BACKUP_NAME_PREFIX + "' and trashed = false")
+                .setOrderBy("modifiedTime desc")
+                .setPageSize(1)
+                .setFields("files(id, name, modifiedTime)")
+                .execute();
+
+        List<com.google.api.services.drive.model.File> files = result.getFiles();
+        if (files == null || files.isEmpty()) {
+            return "No backups found yet";
+        }
+        com.google.api.services.drive.model.File latest = files.get(0);
+        LocalDateTime modified = Instant.ofEpochMilli(latest.getModifiedTime().getValue())
+                .atZone(ZoneId.systemDefault()).toLocalDateTime();
+        return "Last backup: " + modified.format(DISPLAY_FORMAT);
     }
 
     /** Finds this app's dedicated "finance_app" Drive folder, creating it the first time if it doesn't exist yet. */

@@ -339,6 +339,11 @@ public class DashboardHomeController {
         }
         dashExpensePieChart.setData(pieData);
 
+        for (PieChart.Data slice : pieData) {
+            Tooltip tooltip = new Tooltip(slice.getName() + "\n" + fmt(BigDecimal.valueOf(slice.getPieValue())));
+            Tooltip.install(slice.getNode(), tooltip);
+        }
+
         if (topCategory == null) {
             topExpenseLabel.setText("No expense this month");
         } else {

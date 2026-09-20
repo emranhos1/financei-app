@@ -97,9 +97,18 @@ public class FinanceApplication extends Application {
 
         Scene scene = new Scene(root, width, height);
         applyCSS(scene);
+        // Hiding before reconfiguring forces Windows to tear down and repaint the native window
+        // fresh, instead of resizing/re-showing the already-visible Dashboard window in place -
+        // the latter can leave stale Dashboard pixels ghosted behind the new Login content.
+        primaryStage.hide();
         primaryStage.setTitle("Daily Finance Management System");
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
+        // A Stage does NOT auto-resize to a new Scene's dimensions once it has already been shown
+        // once with an explicit size - it keeps whatever width/height it last had (e.g. still the
+        // Dashboard's size here) unless told to resize explicitly.
+        primaryStage.setWidth(width);
+        primaryStage.setHeight(height);
         primaryStage.centerOnScreen();
         primaryStage.show();
     }
@@ -115,11 +124,20 @@ public class FinanceApplication extends Application {
 
         Scene scene = new Scene(root, width, height);
         applyCSS(scene);
+        // See showLoginScreen() - hide before reconfiguring avoids ghosted stale pixels from the
+        // previous (Login) window bleeding through the resized Dashboard window.
+        primaryStage.hide();
         primaryStage.setScene(scene);
         primaryStage.setResizable(true);
         primaryStage.setMinWidth(screenBounds.getWidth() * 0.45);
         primaryStage.setMinHeight(screenBounds.getHeight() * 0.45);
+        // See showLoginScreen() - a Stage keeps its previous width/height across a setScene() call,
+        // so without this the Dashboard would render at the small Login window's size, squeezing
+        // and truncating every card on the page.
+        primaryStage.setWidth(width);
+        primaryStage.setHeight(height);
         primaryStage.centerOnScreen();
+        primaryStage.show();
     }
 
     private static void applyCSS(Scene scene) {

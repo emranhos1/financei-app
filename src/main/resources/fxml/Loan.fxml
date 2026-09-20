@@ -23,8 +23,8 @@
                                 <ColumnConstraints percentWidth="50" minWidth="10"/>
                                 <ColumnConstraints percentWidth="50" minWidth="10"/>
                             </columnConstraints>
-                            <Label text="Person" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                            <Label text="Account" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Person" minWidth="0" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label text="Account" minWidth="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
                             <ComboBox fx:id="personComboBox" maxWidth="Infinity" minWidth="0" promptText="Select a person"
                                       GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                             <ComboBox fx:id="accountComboBox" maxWidth="Infinity" minWidth="0"
@@ -44,8 +44,8 @@
                                 <ColumnConstraints percentWidth="50" minWidth="10"/>
                                 <ColumnConstraints percentWidth="50" minWidth="10"/>
                             </columnConstraints>
-                            <Label text="Transfer Type" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                            <Label text="Category" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Transfer Type" minWidth="0" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label text="Category" minWidth="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
                             <ComboBox fx:id="transferTypeComboBox" maxWidth="Infinity" minWidth="0" promptText="Optional"
                                       GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                             <ComboBox fx:id="categoryComboBox" maxWidth="Infinity" minWidth="0" promptText="Optional"
@@ -60,8 +60,8 @@
                                 <ColumnConstraints percentWidth="50" minWidth="10"/>
                                 <ColumnConstraints percentWidth="50" minWidth="10"/>
                             </columnConstraints>
-                            <Label text="Date" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                            <Label text="Due Date (optional)" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                            <Label text="Date" minWidth="0" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label text="Due Date (optional)" minWidth="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
                             <DatePicker fx:id="datePicker" maxWidth="Infinity" minWidth="0"
                                         GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                             <DatePicker fx:id="dueDatePicker" maxWidth="Infinity" minWidth="0"
@@ -157,10 +157,17 @@
 
                     <Button fx:id="addPersonBtn" text="Add Loan Account" onAction="#handleAddPerson" maxWidth="Infinity" styleClass="btn-primary"/>
 
-                    <HBox fx:id="personEditButtons" spacing="8" managed="false" visible="false">
-                        <Button text="Delete" onAction="#handleDeletePerson" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
-                        <Button text="Cancel" onAction="#handleCancelPersonSelection" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
-                    </HBox>
+                    <VBox fx:id="personEditButtons" spacing="8" managed="false" visible="false">
+                        <HBox spacing="8">
+                            <Button text="Update" onAction="#handleUpdatePerson" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-primary"/>
+                            <Button text="Delete" onAction="#handleDeletePerson" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-accent"/>
+                            <Button text="Cancel" onAction="#handleCancelPersonSelection" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="btn-secondary"/>
+                        </HBox>
+
+                        <Label text="Merge into" style="-fx-font-weight: bold; -fx-font-size: 12;"/>
+                        <ComboBox fx:id="mergeTargetComboBox" maxWidth="Infinity" promptText="Select a person"/>
+                        <Button text="Merge" onAction="#handleMergePerson" maxWidth="Infinity" styleClass="btn-accent"/>
+                    </VBox>
                 </VBox>
 
                 <TableView fx:id="personsTable" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">

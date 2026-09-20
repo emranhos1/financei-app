@@ -20,7 +20,9 @@
     </HBox>
 
     <HBox spacing="10">
-        <VBox style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;" HBox.hgrow="ALWAYS">
+        <VBox spacing="4" prefWidth="230" minWidth="210">
+            <Label text="Summary" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+            <VBox style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;" VBox.vgrow="ALWAYS">
             <GridPane hgap="30" vgap="8">
                 <Label text="Total Income:"  GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                 <Label fx:id="totalIncomeLabel"  text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
@@ -29,43 +31,80 @@
                 <Label text="Net Income:"    GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                 <Label fx:id="netIncomeLabel"    text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
             </GridPane>
+            </VBox>
         </VBox>
 
-        <VBox spacing="6" style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;" HBox.hgrow="ALWAYS">
-            <Label text="Period Comparison" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
-            <HBox spacing="8" alignment="CENTER_LEFT">
-                <Label text="A:"/>
-                <DatePicker fx:id="compareAStartPicker" prefWidth="115"/>
-                <Label text="to"/>
-                <DatePicker fx:id="compareAEndPicker" prefWidth="115"/>
-                <Label text="B:"/>
-                <DatePicker fx:id="compareBStartPicker" prefWidth="115"/>
-                <Label text="to"/>
-                <DatePicker fx:id="compareBEndPicker" prefWidth="115"/>
-                <Button text="Compare" onAction="#handleCompare" styleClass="btn-primary"/>
-            </HBox>
-            <GridPane hgap="20" vgap="4">
-                <Label text="A" style="-fx-font-weight: bold;" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                <Label text="B" style="-fx-font-weight: bold;" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
-                <Label text="Change (A → B)" style="-fx-font-weight: bold;" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+        <HBox spacing="10" HBox.hgrow="ALWAYS">
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label text="Expense by Category" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+                <TableView fx:id="expenseCategoryTable" minHeight="120" prefHeight="120">
+                    <columns>
+                        <TableColumn fx:id="expCategoryNameColumn"   text="Category" prefWidth="160"/>
+                        <TableColumn fx:id="expCategoryAmountColumn" text="Amount"   prefWidth="120"/>
+                    </columns>
+                    <placeholder><Label text="No data"/></placeholder>
+                </TableView>
+            </VBox>
 
-                <Label text="Income:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                <Label fx:id="compareIncomeALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                <Label fx:id="compareIncomeBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-                <Label fx:id="compareIncomeChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label text="Income by Category" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+                <TableView fx:id="incomeCategoryTable" minHeight="120" prefHeight="120">
+                    <columns>
+                        <TableColumn fx:id="incCategoryNameColumn"   text="Category" prefWidth="160"/>
+                        <TableColumn fx:id="incCategoryAmountColumn" text="Amount"   prefWidth="120"/>
+                    </columns>
+                    <placeholder><Label text="No data"/></placeholder>
+                </TableView>
+            </VBox>
 
-                <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
-                <Label fx:id="compareExpenseALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                <Label fx:id="compareExpenseBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
-                <Label fx:id="compareExpenseChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
-
-                <Label text="Net:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
-                <Label fx:id="compareNetALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
-                <Label fx:id="compareNetBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
-                <Label fx:id="compareNetChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
-            </GridPane>
-        </VBox>
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label text="Account Balances" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+                <TableView fx:id="accountTable" minHeight="120" prefHeight="120">
+                    <columns>
+                        <TableColumn fx:id="accountNameColumn"    text="Account" prefWidth="120"/>
+                        <TableColumn fx:id="accountTypeColumn"    text="Type"    prefWidth="80"/>
+                        <TableColumn fx:id="accountBalanceColumn" text="Balance" prefWidth="110"/>
+                    </columns>
+                    <placeholder><Label text="No accounts"/></placeholder>
+                </TableView>
+            </VBox>
+        </HBox>
     </HBox>
+
+    <VBox spacing="6" style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;">
+        <Label text="Period Comparison" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label text="A:"/>
+            <DatePicker fx:id="compareAStartPicker" prefWidth="115"/>
+            <Label text="to"/>
+            <DatePicker fx:id="compareAEndPicker" prefWidth="115"/>
+            <Label text="B:"/>
+            <DatePicker fx:id="compareBStartPicker" prefWidth="115"/>
+            <Label text="to"/>
+            <DatePicker fx:id="compareBEndPicker" prefWidth="115"/>
+            <Button text="Compare" onAction="#handleCompare" styleClass="btn-primary"/>
+        </HBox>
+        <GridPane hgap="20" vgap="4">
+            <Label text="A" style="-fx-font-weight: bold;" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="B" style="-fx-font-weight: bold;" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+            <Label text="Change (A → B)" style="-fx-font-weight: bold;" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+            <Label text="Income:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="compareIncomeALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label fx:id="compareIncomeBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+            <Label fx:id="compareIncomeChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+            <Label text="Expense:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="compareExpenseALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+            <Label fx:id="compareExpenseBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+            <Label fx:id="compareExpenseChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+
+            <Label text="Net:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+            <Label fx:id="compareNetALabel" text="৳ 0.00" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+            <Label fx:id="compareNetBLabel" text="৳ 0.00" GridPane.columnIndex="2" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+            <Label fx:id="compareNetChangeLabel" text="-" GridPane.columnIndex="3" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+        </GridPane>
+    </VBox>
 
     <VBox spacing="4" style="-fx-border-color: #B7D9CE; -fx-padding: 10; -fx-background-color: #ffffff;">
         <HBox alignment="CENTER_LEFT" spacing="10">
@@ -89,42 +128,6 @@
             </yAxis>
         </LineChart>
     </VBox>
-
-    <HBox spacing="10" VBox.vgrow="NEVER">
-        <VBox spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Expense by Category" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
-            <TableView fx:id="expenseCategoryTable" minHeight="120" prefHeight="120">
-                <columns>
-                    <TableColumn fx:id="expCategoryNameColumn"   text="Category" prefWidth="160"/>
-                    <TableColumn fx:id="expCategoryAmountColumn" text="Amount"   prefWidth="120"/>
-                </columns>
-                <placeholder><Label text="No data"/></placeholder>
-            </TableView>
-        </VBox>
-
-        <VBox spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Income by Category" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
-            <TableView fx:id="incomeCategoryTable" minHeight="120" prefHeight="120">
-                <columns>
-                    <TableColumn fx:id="incCategoryNameColumn"   text="Category" prefWidth="160"/>
-                    <TableColumn fx:id="incCategoryAmountColumn" text="Amount"   prefWidth="120"/>
-                </columns>
-                <placeholder><Label text="No data"/></placeholder>
-            </TableView>
-        </VBox>
-
-        <VBox spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Account Balances" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
-            <TableView fx:id="accountTable" minHeight="120" prefHeight="120">
-                <columns>
-                    <TableColumn fx:id="accountNameColumn"    text="Account" prefWidth="120"/>
-                    <TableColumn fx:id="accountTypeColumn"    text="Type"    prefWidth="80"/>
-                    <TableColumn fx:id="accountBalanceColumn" text="Balance" prefWidth="110"/>
-                </columns>
-                <placeholder><Label text="No accounts"/></placeholder>
-            </TableView>
-        </VBox>
-    </HBox>
 
     <HBox spacing="10" style="-fx-alignment: CENTER-LEFT;">
         <Label text="Account Log" style="-fx-font-size: 13; -fx-font-weight: bold;"/>
