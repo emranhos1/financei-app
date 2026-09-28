@@ -105,6 +105,12 @@ public class DashboardController {
         if (tabPane != null) tabPane.getSelectionModel().select(2);
     }
 
+    /** Called from the Dashboard's FDR/DPS maturity reminder toast so clicking it jumps to the Accounts tab. */
+    public void goToAccountsTab() {
+        loadView("/fxml/Accounts.fxml");
+        setActiveButton(accountsBtn);
+    }
+
     private void setActiveButton(Button active) {
         for (Button b : new Button[]{dashboardBtn, accountsBtn, transactionBtn, reportsBtn, calculatorBtn, adminBtn}) {
             b.getStyleClass().remove("sidebar-btn-active");

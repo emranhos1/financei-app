@@ -257,19 +257,21 @@ public class LoanService {
             BigDecimal totalLent = BigDecimal.ZERO;
             BigDecimal totalBorrowed = BigDecimal.ZERO;
             BigDecimal netRemaining = BigDecimal.ZERO;
+            BigDecimal lentRemaining = BigDecimal.ZERO;
             int openCount = 0;
             for (Loan loan : loans) {
                 BigDecimal remaining = getRemaining(loan);
                 if (loan.getType() == Loan.LoanType.LENT) {
                     totalLent = totalLent.add(loan.getPrincipalAmount());
                     netRemaining = netRemaining.add(remaining);
+                    lentRemaining = lentRemaining.add(remaining);
                 } else {
                     totalBorrowed = totalBorrowed.add(loan.getPrincipalAmount());
                     netRemaining = netRemaining.subtract(remaining);
                 }
                 if (loan.getStatus() == Loan.LoanStatus.OPEN) openCount++;
             }
-            result.add(new PersonSummary(person.getId(), person.getName(), totalLent, totalBorrowed, netRemaining, openCount));
+            result.add(new PersonSummary(person.getId(), person.getName(), totalLent, totalBorrowed, netRemaining, openCount, lentRemaining));
         }
         return result;
     }
@@ -283,6 +285,8 @@ public class LoanService {
         private BigDecimal totalBorrowed;
         private BigDecimal netRemaining;
         private int openCount;
+        /** Still-unpaid amount of only the "I Gave" (LENT) loans - not netted against BORROWED. */
+        private BigDecimal lentRemaining;
     }
 
     /** OPEN loans whose due date is within the next daysAhead days, or already overdue. */

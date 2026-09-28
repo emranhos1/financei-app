@@ -77,6 +77,21 @@ PREPARE stmt FROM @alter_stmt;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- low_balance_threshold is an optional per-account floor: when an account's balance drops below
+-- it, the Dashboard shows a warning toast. NULL (the default for every existing account) means
+-- no alert is configured for that account - opt-in only, never changes existing behavior.
+SET @col_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accounts' AND COLUMN_NAME = 'low_balance_threshold'
+);
+SET @alter_stmt = IF(@col_exists = 0,
+    'ALTER TABLE accounts ADD COLUMN low_balance_threshold DECIMAL(15,2) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @alter_stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 CREATE TABLE IF NOT EXISTS categories (
                                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                           user_id BIGINT NOT NULL,

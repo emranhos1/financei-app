@@ -42,6 +42,7 @@ public class AccountsController {
     @FXML private TextField balanceField;
     @FXML private DatePicker maturityDatePicker;
     @FXML private TextField installmentField;
+    @FXML private TextField lowBalanceThresholdField;
     @FXML private Button accAddBtn;
     @FXML private HBox accEditButtons;
 
@@ -88,6 +89,7 @@ public class AccountsController {
                 balanceField.setText(sel.getBalance().toPlainString());
                 maturityDatePicker.setValue(sel.getMaturityDate());
                 installmentField.setText(sel.getInstallmentAmount() != null ? sel.getInstallmentAmount().toPlainString() : "");
+                lowBalanceThresholdField.setText(sel.getLowBalanceThreshold() != null ? sel.getLowBalanceThreshold().toPlainString() : "");
                 accAddBtn.setVisible(false);
                 accAddBtn.setManaged(false);
                 accEditButtons.setVisible(true);
@@ -116,12 +118,17 @@ public class AccountsController {
         if (!instStr.isEmpty()) {
             try { new BigDecimal(instStr); } catch (NumberFormatException e) { showAlert("Validation Error", "Installment amount must be a valid number"); return; }
         }
+        String thresholdStr = lowBalanceThresholdField.getText().trim();
+        if (!thresholdStr.isEmpty()) {
+            try { new BigDecimal(thresholdStr); } catch (NumberFormatException e) { showAlert("Validation Error", "Low balance alert threshold must be a valid number"); return; }
+        }
         if (!confirm("Add account '" + name + "'?")) return;
         try {
             LocalDate maturityDate = maturityDatePicker.getValue();
             BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
+            BigDecimal lowBalanceThreshold = thresholdStr.isEmpty() ? null : new BigDecimal(thresholdStr);
             accountService.createAccount(sessionContext.getCurrentUserId(), name, type.getId(), new BigDecimal(balStr),
-                    maturityDate, installmentAmount);
+                    maturityDate, installmentAmount, lowBalanceThreshold);
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -138,12 +145,17 @@ public class AccountsController {
         if (!instStr.isEmpty()) {
             try { new BigDecimal(instStr); } catch (NumberFormatException e) { showAlert("Validation Error", "Installment amount must be a valid number"); return; }
         }
+        String thresholdStr = lowBalanceThresholdField.getText().trim();
+        if (!thresholdStr.isEmpty()) {
+            try { new BigDecimal(thresholdStr); } catch (NumberFormatException e) { showAlert("Validation Error", "Low balance alert threshold must be a valid number"); return; }
+        }
         if (!confirm("Update account '" + sel.getName() + "'?")) return;
         try {
             BigDecimal balance = new BigDecimal(balStr);
             LocalDate maturityDate = maturityDatePicker.getValue();
             BigDecimal installmentAmount = instStr.isEmpty() ? null : new BigDecimal(instStr);
-            accountService.updateAccount(sel.getId(), name, type.getId(), balance, maturityDate, installmentAmount);
+            BigDecimal lowBalanceThreshold = thresholdStr.isEmpty() ? null : new BigDecimal(thresholdStr);
+            accountService.updateAccount(sel.getId(), name, type.getId(), balance, maturityDate, installmentAmount, lowBalanceThreshold);
             resetAccountForm(); loadAccounts();
         } catch (NumberFormatException e) { showAlert("Validation Error", "Balance must be a valid number");
         } catch (Exception e) { showAlert("Error", e.getMessage()); }
@@ -161,7 +173,7 @@ public class AccountsController {
 
     private void resetAccountForm() {
         nameField.clear(); balanceField.clear(); typeComboBox.setValue(null);
-        maturityDatePicker.setValue(null); installmentField.clear();
+        maturityDatePicker.setValue(null); installmentField.clear(); lowBalanceThresholdField.clear();
         accountsTable.getSelectionModel().clearSelection();
         accAddBtn.setVisible(true); accAddBtn.setManaged(true);
         accEditButtons.setVisible(false); accEditButtons.setManaged(false);

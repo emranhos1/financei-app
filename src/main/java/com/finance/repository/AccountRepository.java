@@ -8,12 +8,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
     List<Account> findByUserId(Long userId);
     List<Account> findByUserIdAndAccountType(Long userId, AccountType accountType);
+    List<Account> findByUserIdAndMaturityDateNotNullAndMaturityDateLessThanEqual(Long userId, LocalDate cutoff);
 
     @Query("SELECT COALESCE(SUM(a.balance), 0) FROM Account a WHERE a.userId = :userId")
     BigDecimal sumBalanceByUserId(@Param("userId") Long userId);

@@ -116,10 +116,10 @@
                         <TableView fx:id="personsSummaryTable" VBox.vgrow="ALWAYS">
                             <columns>
                                 <TableColumn fx:id="summaryPersonColumn"   text="Person"         prefWidth="130"/>
-                                <TableColumn fx:id="summaryLentColumn"     text="Total Gave"     prefWidth="105"/>
-                                <TableColumn fx:id="summaryBorrowedColumn" text="Total Took"     prefWidth="115"/>
                                 <TableColumn fx:id="summaryNetColumn"      text="Net Remaining"  prefWidth="115"/>
                                 <TableColumn fx:id="summaryOpenColumn"     text="Open Loans"     prefWidth="90"/>
+                                <TableColumn fx:id="summaryLentColumn"     text="Total Gave"     prefWidth="105"/>
+                                <TableColumn fx:id="summaryBorrowedColumn" text="Total Took"     prefWidth="115"/>
                             </columns>
                             <placeholder><Label text="No loan accounts yet. Add one from the Loan Accounts tab."/></placeholder>
                         </TableView>
@@ -129,6 +129,7 @@
                         <Label fx:id="historyTitleLabel" text="History" style="-fx-font-weight: bold; -fx-font-size: 13;"/>
                         <TableView fx:id="loansTable" VBox.vgrow="ALWAYS">
                             <columns>
+                                <TableColumn fx:id="dateColumn"      text="Date"      prefWidth="90"/>
                                 <TableColumn fx:id="typeColumn"      text="Type"      prefWidth="80"/>
                                 <TableColumn fx:id="principalColumn" text="Principal" prefWidth="95"/>
                                 <TableColumn fx:id="remainingColumn" text="Remaining" prefWidth="95"/>

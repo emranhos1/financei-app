@@ -40,6 +40,9 @@ public class Account {
     @Column
     private BigDecimal installmentAmount;
 
+    @Column
+    private BigDecimal lowBalanceThreshold;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

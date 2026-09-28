@@ -25,6 +25,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -68,6 +69,12 @@ public class DashboardHomeController {
     @FXML private HBox loanReminderBanner;
     @FXML private Label loanReminderLabel;
 
+    @FXML private HBox maturityReminderBanner;
+    @FXML private Label maturityReminderLabel;
+
+    @FXML private HBox lowBalanceReminderBanner;
+    @FXML private Label lowBalanceReminderLabel;
+
     @FXML private HBox balanceCardsBox;
 
     @FXML private Label netWorthAmountLabel;
@@ -80,6 +87,10 @@ public class DashboardHomeController {
     @FXML private Label topExpenseLabel;
     @FXML private PieChart dashExpensePieChart;
 
+    @FXML private VBox loansGivenCard;
+    @FXML private Label loansGivenTotalLabel;
+    @FXML private GridPane loansGivenBox;
+
     @FXML private VBox cashMonthlyExpenseBox;
     @FXML private VBox bankMonthlyExpenseBox;
 
@@ -89,6 +100,17 @@ public class DashboardHomeController {
         showLoanReminderToast();
         loanReminderBanner.setCursor(javafx.scene.Cursor.HAND);
         loanReminderBanner.setOnMouseClicked(e -> dashboardController.goToLoansTab());
+
+        showMaturityReminderToast();
+        maturityReminderBanner.setCursor(javafx.scene.Cursor.HAND);
+        maturityReminderBanner.setOnMouseClicked(e -> dashboardController.goToAccountsTab());
+
+        showLowBalanceToast();
+        lowBalanceReminderBanner.setCursor(javafx.scene.Cursor.HAND);
+        lowBalanceReminderBanner.setOnMouseClicked(e -> dashboardController.goToAccountsTab());
+
+        loansGivenCard.setCursor(javafx.scene.Cursor.HAND);
+        loansGivenCard.setOnMouseClicked(e -> dashboardController.goToLoansTab());
     }
 
     private void showLoanReminderToast() {
@@ -120,6 +142,60 @@ public class DashboardHomeController {
         pause.play();
     }
 
+    private void showMaturityReminderToast() {
+        List<Account> maturingAccounts = accountService.getUpcomingMaturities(sessionContext.getCurrentUserId(), 3);
+        if (maturingAccounts.isEmpty()) {
+            maturityReminderBanner.setVisible(false);
+            maturityReminderBanner.setManaged(false);
+            return;
+        }
+
+        LocalDate today = LocalDate.now();
+        Account first = maturingAccounts.get(0);
+        long daysDiff = ChronoUnit.DAYS.between(today, first.getMaturityDate());
+        String status = daysDiff < 0 ? "matured " + (-daysDiff) + " day(s) ago"
+                : daysDiff == 0 ? "matures today"
+                : "matures in " + daysDiff + " day(s)";
+        String message = maturingAccounts.size() == 1
+                ? first.getName() + " " + status + " — check the Accounts tab."
+                : maturingAccounts.size() + " accounts are maturing soon or overdue — check the Accounts tab.";
+        maturityReminderLabel.setText(message);
+        maturityReminderBanner.setVisible(true);
+        maturityReminderBanner.setManaged(true);
+
+        PauseTransition pause = new PauseTransition(Duration.seconds(6));
+        pause.setOnFinished(e -> {
+            maturityReminderBanner.setVisible(false);
+            maturityReminderBanner.setManaged(false);
+        });
+        pause.play();
+    }
+
+    private void showLowBalanceToast() {
+        List<Account> lowAccounts = accountService.getAccountsBelowThreshold(sessionContext.getCurrentUserId());
+        if (lowAccounts.isEmpty()) {
+            lowBalanceReminderBanner.setVisible(false);
+            lowBalanceReminderBanner.setManaged(false);
+            return;
+        }
+
+        Account first = lowAccounts.get(0);
+        String message = lowAccounts.size() == 1
+                ? first.getName() + " balance (৳ " + first.getBalance().toPlainString()
+                        + ") is below your ৳ " + first.getLowBalanceThreshold().toPlainString() + " alert — check the Accounts tab."
+                : lowAccounts.size() + " accounts are below their low-balance alert — check the Accounts tab.";
+        lowBalanceReminderLabel.setText(message);
+        lowBalanceReminderBanner.setVisible(true);
+        lowBalanceReminderBanner.setManaged(true);
+
+        PauseTransition pause = new PauseTransition(Duration.seconds(6));
+        pause.setOnFinished(e -> {
+            lowBalanceReminderBanner.setVisible(false);
+            lowBalanceReminderBanner.setManaged(false);
+        });
+        pause.play();
+    }
+
     public void refreshDashboard() {
         Long userId = sessionContext.getCurrentUserId();
         LocalDate today = LocalDate.now();
@@ -132,6 +208,7 @@ public class DashboardHomeController {
         buildRecentTransactions(userId, accounts);
         buildExpenseRing(userId, accounts, monthStart, today);
         buildTopExpense(userId, accounts, monthStart, today);
+        buildLoansGiven(userId);
         buildMonthlyExpenseByType(cashMonthlyExpenseBox, userId, accounts, "CASH");
         buildMonthlyExpenseByType(bankMonthlyExpenseBox, userId, accounts, "BANK");
     }
@@ -348,6 +425,58 @@ public class DashboardHomeController {
             topExpenseLabel.setText("No expense this month");
         } else {
             topExpenseLabel.setText(topCategory.getName() + " — " + fmt(topAmount));
+        }
+    }
+
+    /** One tile per person (4 per row) who still owes money on "I Gave" (LENT) loans, largest first. Only the
+     *  LENT side is shown - money the user borrowed from the same person is not netted off here. */
+    private void buildLoansGiven(Long userId) {
+        List<LoanService.PersonSummary> owing = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        for (LoanService.PersonSummary ps : loanService.getPersonSummaries(userId)) {
+            if (ps.getLentRemaining().compareTo(BigDecimal.ZERO) > 0) {
+                owing.add(ps);
+                total = total.add(ps.getLentRemaining());
+            }
+        }
+        owing.sort((a, b) -> b.getLentRemaining().compareTo(a.getLentRemaining()));
+        loansGivenTotalLabel.setText(fmt(total));
+
+        loansGivenBox.getChildren().clear();
+        // hide the whole card when nobody owes anything
+        boolean hasOwing = !owing.isEmpty();
+        loansGivenCard.setVisible(hasOwing);
+        loansGivenCard.setManaged(hasOwing);
+        if (!hasOwing) return;
+
+        int columns = loansGivenBox.getColumnConstraints().size();
+        for (int i = 0; i < owing.size(); i++) {
+            LoanService.PersonSummary ps = owing.get(i);
+            Label badge = new Label(initials(ps.getPersonName()));
+            badge.getStyleClass().addAll("dash-badge", paletteClass(ps.getPersonName()));
+
+            Label nameLabel = new Label(ps.getPersonName());
+            nameLabel.getStyleClass().add("dash-tx-title");
+            Label amountLabel = new Label(fmt(ps.getLentRemaining()));
+            amountLabel.getStyleClass().add("dash-tx-amount-pos");
+            BigDecimal repaid = ps.getTotalLent().subtract(ps.getLentRemaining());
+            Label subLabel = new Label("Given " + fmt(ps.getTotalLent()) + " · Repaid " + fmt(repaid));
+            subLabel.getStyleClass().add("dash-tx-sub");
+
+            // name and amount share one line so each tile stays two lines tall
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+            HBox topLine = new HBox(6, nameLabel, spacer, amountLabel);
+            topLine.setAlignment(Pos.CENTER_LEFT);
+            VBox textBox = new VBox(0, topLine, subLabel);
+            textBox.setMinWidth(0);
+            HBox.setHgrow(textBox, Priority.ALWAYS);
+
+            HBox tile = new HBox(8, badge, textBox);
+            tile.setAlignment(Pos.CENTER_LEFT);
+            tile.getStyleClass().add("dash-loan-tile");
+            tile.setMaxWidth(Double.MAX_VALUE);
+            loansGivenBox.add(tile, i % columns, i / columns);
         }
     }
 

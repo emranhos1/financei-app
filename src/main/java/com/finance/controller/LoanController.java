@@ -70,6 +70,7 @@ public class LoanController {
 
     @FXML private Label historyTitleLabel;
     @FXML private TableView<Loan> loansTable;
+    @FXML private TableColumn<Loan, LocalDate> dateColumn;
     @FXML private TableColumn<Loan, String> typeColumn;
     @FXML private TableColumn<Loan, BigDecimal> principalColumn;
     @FXML private TableColumn<Loan, BigDecimal> remainingColumn;
@@ -174,6 +175,7 @@ public class LoanController {
     }
 
     private void setupHistoryTable() {
+        dateColumn.setCellValueFactory(new PropertyValueFactory<>("loanDate"));
         principalColumn.setCellValueFactory(new PropertyValueFactory<>("principalAmount"));
         dueDateColumn.setCellValueFactory(new PropertyValueFactory<>("dueDate"));
         noteColumn.setCellValueFactory(new PropertyValueFactory<>("note"));

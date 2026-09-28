@@ -25,13 +25,14 @@ public class AccountService {
     private final AccountLogRepository accountLogRepository;
 
     public Account createAccount(Long userId, String name, Long accountTypeId, BigDecimal initialBalance,
-                                 LocalDate maturityDate, BigDecimal installmentAmount) {
+                                 LocalDate maturityDate, BigDecimal installmentAmount, BigDecimal lowBalanceThreshold) {
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
         BigDecimal balance = initialBalance != null ? initialBalance : BigDecimal.ZERO;
         Account account = accountRepository.save(Account.builder()
                 .userId(userId).name(name).accountType(accountType).balance(balance)
-                .maturityDate(maturityDate).installmentAmount(installmentAmount).build());
+                .maturityDate(maturityDate).installmentAmount(installmentAmount)
+                .lowBalanceThreshold(lowBalanceThreshold).build());
         if (balance.compareTo(BigDecimal.ZERO) != 0) {
             accountLogRepository.save(AccountLog.builder()
                     .accountId(account.getId()).userId(userId)
@@ -53,7 +54,7 @@ public class AccountService {
     }
 
     public Account updateAccount(Long accountId, String name, Long accountTypeId, BigDecimal newBalance,
-                                 LocalDate maturityDate, BigDecimal installmentAmount) {
+                                 LocalDate maturityDate, BigDecimal installmentAmount, BigDecimal lowBalanceThreshold) {
         Account account = getAccountById(accountId);
         AccountType accountType = accountTypeRepository.findById(accountTypeId)
                 .orElseThrow(() -> new IllegalArgumentException("Account type not found"));
@@ -63,6 +64,7 @@ public class AccountService {
         account.setBalance(newBalance);
         account.setMaturityDate(maturityDate);
         account.setInstallmentAmount(installmentAmount);
+        account.setLowBalanceThreshold(lowBalanceThreshold);
         accountRepository.save(account);
         if (oldBalance.compareTo(newBalance) != 0) {
             BigDecimal diff = newBalance.subtract(oldBalance);
@@ -117,5 +119,21 @@ public class AccountService {
 
     public void deleteAccount(Long accountId) {
         accountRepository.deleteById(accountId);
+    }
+
+    public List<Account> getAccountsBelowThreshold(Long userId) {
+        List<Account> result = new java.util.ArrayList<>();
+        for (Account account : getAccountsByUserId(userId)) {
+            if (account.getLowBalanceThreshold() != null
+                    && account.getBalance().compareTo(account.getLowBalanceThreshold()) < 0) {
+                result.add(account);
+            }
+        }
+        return result;
+    }
+
+    public List<Account> getUpcomingMaturities(Long userId, int daysAhead) {
+        LocalDate cutoff = LocalDate.now().plusDays(daysAhead);
+        return accountRepository.findByUserIdAndMaturityDateNotNullAndMaturityDateLessThanEqual(userId, cutoff);
     }
 }

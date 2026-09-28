@@ -31,6 +31,9 @@
                     <Label text="Installment Amount (optional)"/>
                     <TextField fx:id="installmentField" promptText="0.00"/>
 
+                    <Label text="Low Balance Alert Threshold (optional)"/>
+                    <TextField fx:id="lowBalanceThresholdField" promptText="e.g. 500 — warn when balance falls below this"/>
+
                     <!-- Add button: shown by default -->
                     <Button fx:id="accAddBtn" text="Add Account" onAction="#handleAddAccount" maxWidth="Infinity" styleClass="btn-primary"/>
 

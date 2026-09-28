@@ -270,6 +270,22 @@
     -fx-padding: 8;
 }
 
+/* compact per-person tile in the "Loans given" dashboard card */
+.dash-loan-tile {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-border-color: #E4ECE9;
+    -fx-border-radius: 8;
+    -fx-padding: 4 8 4 8;
+}
+.dash-loan-tile .dash-badge {
+    -fx-min-width: 22; -fx-min-height: 22;
+    -fx-max-width: 22; -fx-max-height: 22;
+    -fx-pref-width: 22; -fx-pref-height: 22;
+    -fx-background-radius: 11;
+    -fx-font-size: 10;
+}
+
 .dash-account-type {
     -fx-font-size: 13;
     -fx-font-weight: bold;
