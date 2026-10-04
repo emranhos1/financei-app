@@ -22,8 +22,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -41,27 +43,11 @@ public class ReportsController {
     private final AccountService accountService;
     private final CategoryService categoryService;
 
-    @FXML private DatePicker startDatePicker;
-    @FXML private DatePicker endDatePicker;
     @FXML private Label totalIncomeLabel;
     @FXML private Label totalExpenseLabel;
     @FXML private Label netIncomeLabel;
 
     @FXML private LineChart<String, Number> trendChart;
-
-    @FXML private DatePicker compareAStartPicker;
-    @FXML private DatePicker compareAEndPicker;
-    @FXML private DatePicker compareBStartPicker;
-    @FXML private DatePicker compareBEndPicker;
-    @FXML private Label compareIncomeALabel;
-    @FXML private Label compareIncomeBLabel;
-    @FXML private Label compareIncomeChangeLabel;
-    @FXML private Label compareExpenseALabel;
-    @FXML private Label compareExpenseBLabel;
-    @FXML private Label compareExpenseChangeLabel;
-    @FXML private Label compareNetALabel;
-    @FXML private Label compareNetBLabel;
-    @FXML private Label compareNetChangeLabel;
 
     @FXML private TableView<CategoryRow> expenseCategoryTable;
     @FXML private TableColumn<CategoryRow, String> expCategoryNameColumn;
@@ -76,7 +62,6 @@ public class ReportsController {
     @FXML private TableColumn<AccountRow, String> accountTypeColumn;
     @FXML private TableColumn<AccountRow, BigDecimal> accountBalanceColumn;
 
-    @FXML private MenuButton accountLogMenuButton;
     @FXML private TableView<AccountLog> accountLogTable;
     @FXML private TableColumn<AccountLog, String> logDateColumn;
     @FXML private TableColumn<AccountLog, String> logChangeTypeColumn;
@@ -90,9 +75,22 @@ public class ReportsController {
     @FXML private Label logPageLabel;
     @FXML private ComboBox<Integer> logPageSizeComboBox;
 
+    // page-wide filters (top bar) - applied to every section of this page
+    @FXML private MenuButton accountFilterMenuButton;
+    @FXML private DateRangeField filterDateRangeField;
+    @FXML private ComboBox<String> filterRefTypeComboBox;
+    @FXML private ComboBox<String> filterCategoryComboBox;
+    private static final String ALL_REFERENCES = "All references";
+    private static final String ALL_CATEGORIES = "All categories";
+    /** Category dropdown label -> category id (labels made unique when two categories share a name). */
+    private final Map<String, Long> categoryIdsByLabel = new LinkedHashMap<>();
+    /** Used for the summary/category sums when no date range is picked. */
+    private static final LocalDate ALL_TIME_START = LocalDate.of(1970, 1, 1);
+    private static final LocalDate ALL_TIME_END = LocalDate.of(9999, 12, 31);
+
     private List<Account> allAccounts = new ArrayList<>();
-    private final Map<Long, CheckMenuItem> accountLogCheckItems = new LinkedHashMap<>();
-    private CheckMenuItem allAccountsLogItem;
+    private final Map<Long, CheckMenuItem> accountCheckItems = new LinkedHashMap<>();
+    private CheckMenuItem allAccountsItem;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final List<Integer> PAGE_SIZE_OPTIONS = Arrays.asList(5, 10, 20, 50, 100);
     private int logCurrentPage = 0;
@@ -100,10 +98,6 @@ public class ReportsController {
 
     @FXML
     public void initialize() {
-        LocalDate today = LocalDate.now();
-        startDatePicker.setValue(today.withDayOfMonth(1));
-        endDatePicker.setValue(today.withDayOfMonth(today.lengthOfMonth()));
-
         expCategoryNameColumn.setCellValueFactory(new PropertyValueFactory<>("categoryName"));
         expCategoryAmountColumn.setCellValueFactory(new PropertyValueFactory<>("amount"));
         incCategoryNameColumn.setCellValueFactory(new PropertyValueFactory<>("categoryName"));
@@ -124,63 +118,205 @@ public class ReportsController {
         logPageSizeComboBox.setValue(20);
         logPageSizeComboBox.setOnAction(e -> loadAccountLogPage(0));
 
-        LocalDate thisMonthStart = today.withDayOfMonth(1);
-        LocalDate lastMonth = today.minusMonths(1);
-        compareAStartPicker.setValue(lastMonth.withDayOfMonth(1));
-        compareAEndPicker.setValue(lastMonth.withDayOfMonth(lastMonth.lengthOfMonth()));
-        compareBStartPicker.setValue(thisMonthStart);
-        compareBEndPicker.setValue(today.withDayOfMonth(today.lengthOfMonth()));
+        setupFilters();
+        loadAccountDropdown();
+        refreshAll();
+    }
 
+    /** Re-runs every section of the page with the current filters. */
+    private void refreshAll() {
         loadReport();
-        loadAccountLogDropdown();
         loadTrendChart();
-        handleCompare();
+        loadAccountLogPage(0);
+    }
+
+    // ---------------------------------------------------------------- filters
+
+    private void setupFilters() {
+        // default to the current month, as the old Start/End pickers did
+        LocalDate today = LocalDate.now();
+        filterDateRangeField.setRange(today.withDayOfMonth(1), today.withDayOfMonth(today.lengthOfMonth()));
+
+        loadCategoryOptions();
+        filterCategoryComboBox.setValue(ALL_CATEGORIES);
+        // reload on open so categories added since this tab was first shown also appear
+        filterCategoryComboBox.setOnShowing(e -> loadCategoryOptions());
+
+        List<String> refTypes = new ArrayList<>();
+        refTypes.add(ALL_REFERENCES);
+        for (AccountLog.ReferenceType t : AccountLog.ReferenceType.values()) refTypes.add(t.name());
+        filterRefTypeComboBox.setItems(FXCollections.observableArrayList(refTypes));
+        filterRefTypeComboBox.setValue(ALL_REFERENCES);
+
+        filterDateRangeField.setOnChange(this::refreshAll);
+        filterRefTypeComboBox.setOnAction(e -> refreshAll());
+        filterCategoryComboBox.setOnAction(e -> refreshAll());
+    }
+
+    private void loadCategoryOptions() {
+        String selected = filterCategoryComboBox.getValue();
+        categoryIdsByLabel.clear();
+        categoryIdsByLabel.put(ALL_CATEGORIES, null);
+        for (Category c : categoryService.getCategoriesByUserId(sessionContext.getCurrentUserId())) {
+            String label = c.getName();
+            if (categoryIdsByLabel.containsKey(label)) label = label + " (" + c.getType() + ")";
+            categoryIdsByLabel.put(label, c.getId());
+        }
+        filterCategoryComboBox.getItems().setAll(categoryIdsByLabel.keySet());
+        filterCategoryComboBox.setValue(selected != null && categoryIdsByLabel.containsKey(selected) ? selected : ALL_CATEGORIES);
     }
 
     @FXML
-    public void handleCompare() {
-        LocalDate aStart = compareAStartPicker.getValue();
-        LocalDate aEnd = compareAEndPicker.getValue();
-        LocalDate bStart = compareBStartPicker.getValue();
-        LocalDate bEnd = compareBEndPicker.getValue();
-        if (aStart == null || aEnd == null || bStart == null || bEnd == null) {
-            showAlert("Error", "Please select both periods' start and end dates"); return;
-        }
+    public void handleClearFilters() {
+        filterDateRangeField.clear();
+        filterRefTypeComboBox.setValue(ALL_REFERENCES);
+        filterCategoryComboBox.setValue(ALL_CATEGORIES);
+        allAccountsItem.setSelected(true);
+        for (CheckMenuItem item : accountCheckItems.values()) item.setSelected(true);
+        updateAccountButtonText();
+        refreshAll();
+    }
 
+    private void loadAccountDropdown() {
+        allAccounts = accountService.getAccountsByUserId(sessionContext.getCurrentUserId());
+        accountFilterMenuButton.getItems().clear();
+        accountCheckItems.clear();
+
+        allAccountsItem = new CheckMenuItem("All Accounts");
+        allAccountsItem.setSelected(true);
+        allAccountsItem.setOnAction(e -> {
+            boolean select = allAccountsItem.isSelected();
+            for (CheckMenuItem item : accountCheckItems.values()) item.setSelected(select);
+            onAccountSelectionChanged();
+        });
+        accountFilterMenuButton.getItems().add(allAccountsItem);
+        accountFilterMenuButton.getItems().add(new SeparatorMenuItem());
+
+        for (Account acc : allAccounts) {
+            CheckMenuItem item = new CheckMenuItem(acc.getName());
+            item.setSelected(true);
+            item.setOnAction(e -> {
+                if (!item.isSelected()) allAccountsItem.setSelected(false);
+                else if (accountCheckItems.values().stream().allMatch(CheckMenuItem::isSelected)) allAccountsItem.setSelected(true);
+                onAccountSelectionChanged();
+            });
+            accountCheckItems.put(acc.getId(), item);
+            accountFilterMenuButton.getItems().add(item);
+        }
+        updateAccountButtonText();
+    }
+
+    private void onAccountSelectionChanged() {
+        updateAccountButtonText();
+        refreshAll();
+    }
+
+    private void updateAccountButtonText() {
+        List<Account> selected = getSelectedAccounts();
+        if (selected.isEmpty()) {
+            accountFilterMenuButton.setText("Select accounts");
+        } else if (selected.size() == allAccounts.size()) {
+            accountFilterMenuButton.setText("All Accounts");
+        } else if (selected.size() == 1) {
+            accountFilterMenuButton.setText(selected.get(0).getName());
+        } else {
+            accountFilterMenuButton.setText(selected.size() + " accounts selected");
+        }
+    }
+
+    private List<Account> getSelectedAccounts() {
+        List<Account> selected = new ArrayList<>();
+        for (Account acc : allAccounts) {
+            CheckMenuItem item = accountCheckItems.get(acc.getId());
+            if (item != null && item.isSelected()) selected.add(acc);
+        }
+        return selected;
+    }
+
+    private List<Long> getSelectedAccountIds() {
+        List<Long> ids = new ArrayList<>();
+        for (Account acc : getSelectedAccounts()) ids.add(acc.getId());
+        return ids;
+    }
+
+    private AccountLog.ReferenceType getSelectedReference() {
+        String ref = filterRefTypeComboBox.getValue();
+        return ref == null || ALL_REFERENCES.equals(ref) ? null : AccountLog.ReferenceType.valueOf(ref);
+    }
+
+    private Long getSelectedCategoryId() {
+        String cat = filterCategoryComboBox.getValue();
+        return cat == null ? null : categoryIdsByLabel.get(cat);
+    }
+
+    /** Income counts unless the Reference filter picks something other than INCOME. */
+    private boolean includeIncome() {
+        AccountLog.ReferenceType ref = getSelectedReference();
+        return ref == null || ref == AccountLog.ReferenceType.INCOME;
+    }
+
+    /** Expense counts unless the Reference filter picks something other than EXPENSE. */
+    private boolean includeExpense() {
+        AccountLog.ReferenceType ref = getSelectedReference();
+        return ref == null || ref == AccountLog.ReferenceType.EXPENSE;
+    }
+
+    // ---------------------------------------------------------------- sections
+
+    /** Summary + Income/Expense by category + Account balances. Income is money received into the
+     *  selected accounts, expense is money paid from them; transfers and loans are never income or
+     *  expense. Balances are current balances, so only the account filter applies to them. */
+    private void loadReport() {
         Long userId = sessionContext.getCurrentUserId();
-        BigDecimal incomeA = transactionService.getTotalIncome(userId, aStart, aEnd);
-        BigDecimal expenseA = transactionService.getTotalExpense(userId, aStart, aEnd);
-        BigDecimal netA = incomeA.subtract(expenseA);
+        List<Long> accountIds = getSelectedAccountIds();
+        Long categoryId = getSelectedCategoryId();
+        LocalDate start = filterDateRangeField.getStart() != null ? filterDateRangeField.getStart() : ALL_TIME_START;
+        LocalDate end = filterDateRangeField.getEnd() != null ? filterDateRangeField.getEnd() : ALL_TIME_END;
 
-        BigDecimal incomeB = transactionService.getTotalIncome(userId, bStart, bEnd);
-        BigDecimal expenseB = transactionService.getTotalExpense(userId, bStart, bEnd);
-        BigDecimal netB = incomeB.subtract(expenseB);
+        BigDecimal totalIncome = includeIncome()
+                ? transactionService.getIncomeFiltered(userId, accountIds, categoryId, start, end) : BigDecimal.ZERO;
+        BigDecimal totalExpense = includeExpense()
+                ? transactionService.getExpenseFiltered(userId, accountIds, categoryId, start, end) : BigDecimal.ZERO;
+        totalIncomeLabel.setText(String.format("৳ %.2f", totalIncome));
+        totalExpenseLabel.setText(String.format("৳ %.2f", totalExpense));
+        netIncomeLabel.setText(String.format("৳ %.2f", totalIncome.subtract(totalExpense)));
 
-        compareIncomeALabel.setText(String.format("৳ %.2f", incomeA));
-        compareIncomeBLabel.setText(String.format("৳ %.2f", incomeB));
-        compareIncomeChangeLabel.setText(formatChange(incomeA, incomeB));
-
-        compareExpenseALabel.setText(String.format("৳ %.2f", expenseA));
-        compareExpenseBLabel.setText(String.format("৳ %.2f", expenseB));
-        compareExpenseChangeLabel.setText(formatChange(expenseA, expenseB));
-
-        compareNetALabel.setText(String.format("৳ %.2f", netA));
-        compareNetBLabel.setText(String.format("৳ %.2f", netB));
-        compareNetChangeLabel.setText(formatChange(netA, netB));
-    }
-
-    private String formatChange(BigDecimal from, BigDecimal to) {
-        if (from.compareTo(BigDecimal.ZERO) == 0) {
-            return to.compareTo(BigDecimal.ZERO) == 0 ? "0%" : "N/A";
+        List<CategoryRow> expenseRows = new ArrayList<>();
+        if (includeExpense()) {
+            for (Category cat : categoryService.getExpenseCategories(userId)) {
+                if (categoryId != null && !categoryId.equals(cat.getId())) continue;
+                BigDecimal amount = transactionService.getExpenseFiltered(userId, accountIds, cat.getId(), start, end);
+                if (amount.compareTo(BigDecimal.ZERO) != 0) expenseRows.add(new CategoryRow(cat.getName(), amount));
+            }
         }
-        BigDecimal percent = to.subtract(from).divide(from.abs(), 4, java.math.RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100));
-        String sign = percent.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
-        return sign + percent.setScale(1, java.math.RoundingMode.HALF_UP) + "%";
+        expenseCategoryTable.setItems(FXCollections.observableArrayList(expenseRows));
+
+        List<CategoryRow> incomeRows = new ArrayList<>();
+        if (includeIncome()) {
+            for (Category cat : categoryService.getIncomeCategories(userId)) {
+                if (categoryId != null && !categoryId.equals(cat.getId())) continue;
+                BigDecimal amount = transactionService.getIncomeFiltered(userId, accountIds, cat.getId(), start, end);
+                if (amount.compareTo(BigDecimal.ZERO) != 0) incomeRows.add(new CategoryRow(cat.getName(), amount));
+            }
+        }
+        incomeCategoryTable.setItems(FXCollections.observableArrayList(incomeRows));
+
+        List<AccountRow> accountRows = new ArrayList<>();
+        for (Account acc : getSelectedAccounts()) {
+            if (acc.getBalance().compareTo(BigDecimal.ZERO) != 0)
+                accountRows.add(new AccountRow(acc.getName(), acc.getAccountType().getName(), acc.getBalance()));
+        }
+        accountTable.setItems(FXCollections.observableArrayList(accountRows));
     }
 
+    /** Always the last 12 months; the account, reference and category filters apply. */
     private void loadTrendChart() {
         Long userId = sessionContext.getCurrentUserId();
+        List<Long> accountIds = getSelectedAccountIds();
+        Long categoryId = getSelectedCategoryId();
+        boolean withIncome = includeIncome();
+        boolean withExpense = includeExpense();
+
         XYChart.Series<String, Number> incomeSeries = new XYChart.Series<>();
         incomeSeries.setName("Income");
         XYChart.Series<String, Number> expenseSeries = new XYChart.Series<>();
@@ -194,8 +330,10 @@ public class ReportsController {
             LocalDate monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth());
             String label = monthDate.format(monthFormat);
 
-            BigDecimal income = transactionService.getTotalIncome(userId, monthStart, monthEnd);
-            BigDecimal expense = transactionService.getTotalExpense(userId, monthStart, monthEnd);
+            BigDecimal income = withIncome
+                    ? transactionService.getIncomeFiltered(userId, accountIds, categoryId, monthStart, monthEnd) : BigDecimal.ZERO;
+            BigDecimal expense = withExpense
+                    ? transactionService.getExpenseFiltered(userId, accountIds, categoryId, monthStart, monthEnd) : BigDecimal.ZERO;
             incomeSeries.getData().add(new XYChart.Data<>(label, income));
             expenseSeries.getData().add(new XYChart.Data<>(label, expense));
         }
@@ -210,101 +348,15 @@ public class ReportsController {
         }
     }
 
-    @FXML
-    public void handleGenerateReport() { loadReport(); }
-
-    private void loadReport() {
-        LocalDate startDate = startDatePicker.getValue();
-        LocalDate endDate = endDatePicker.getValue();
-        if (startDate == null || endDate == null) {
-            showAlert("Error", "Please select start and end dates"); return;
-        }
-        Long userId = sessionContext.getCurrentUserId();
-
-        BigDecimal totalIncome = transactionService.getTotalIncome(userId, startDate, endDate);
-        BigDecimal totalExpense = transactionService.getTotalExpense(userId, startDate, endDate);
-        totalIncomeLabel.setText(String.format("৳ %.2f", totalIncome));
-        totalExpenseLabel.setText(String.format("৳ %.2f", totalExpense));
-        netIncomeLabel.setText(String.format("৳ %.2f", totalIncome.subtract(totalExpense)));
-
-        List<CategoryRow> expenseRows = new ArrayList<>();
-        for (Category cat : categoryService.getExpenseCategories(userId)) {
-            BigDecimal amount = transactionService.getExpenseByCategory(userId, cat.getId(), startDate, endDate);
-            if (amount.compareTo(BigDecimal.ZERO) != 0) expenseRows.add(new CategoryRow(cat.getName(), amount));
-        }
-        expenseCategoryTable.setItems(FXCollections.observableArrayList(expenseRows));
-
-        List<CategoryRow> incomeRows = new ArrayList<>();
-        for (Category cat : categoryService.getIncomeCategories(userId)) {
-            BigDecimal amount = transactionService.getIncomeByCategory(userId, cat.getId(), startDate, endDate);
-            if (amount.compareTo(BigDecimal.ZERO) != 0) incomeRows.add(new CategoryRow(cat.getName(), amount));
-        }
-        incomeCategoryTable.setItems(FXCollections.observableArrayList(incomeRows));
-
-        List<AccountRow> accountRows = new ArrayList<>();
-        for (Account acc : accountService.getAccountsByUserId(userId)) {
-            if (acc.getBalance().compareTo(BigDecimal.ZERO) != 0)
-                accountRows.add(new AccountRow(acc.getName(), acc.getAccountType().getName(), acc.getBalance()));
-        }
-        accountTable.setItems(FXCollections.observableArrayList(accountRows));
-    }
-
-    private void loadAccountLogDropdown() {
-        allAccounts = accountService.getAccountsByUserId(sessionContext.getCurrentUserId());
-        accountLogMenuButton.getItems().clear();
-        accountLogCheckItems.clear();
-
-        allAccountsLogItem = new CheckMenuItem("All Accounts");
-        allAccountsLogItem.setSelected(true);
-        allAccountsLogItem.setOnAction(e -> {
-            boolean select = allAccountsLogItem.isSelected();
-            for (CheckMenuItem item : accountLogCheckItems.values()) item.setSelected(select);
-            onAccountLogSelectionChanged();
-        });
-        accountLogMenuButton.getItems().add(allAccountsLogItem);
-        accountLogMenuButton.getItems().add(new SeparatorMenuItem());
-
-        for (Account acc : allAccounts) {
-            CheckMenuItem item = new CheckMenuItem(acc.getName());
-            item.setSelected(true);
-            item.setOnAction(e -> {
-                if (!item.isSelected()) allAccountsLogItem.setSelected(false);
-                else if (accountLogCheckItems.values().stream().allMatch(CheckMenuItem::isSelected)) allAccountsLogItem.setSelected(true);
-                onAccountLogSelectionChanged();
-            });
-            accountLogCheckItems.put(acc.getId(), item);
-            accountLogMenuButton.getItems().add(item);
-        }
-
-        onAccountLogSelectionChanged();
-    }
-
-    private List<Account> getSelectedLogAccounts() {
-        List<Account> selected = new ArrayList<>();
-        for (Account acc : allAccounts) {
-            CheckMenuItem item = accountLogCheckItems.get(acc.getId());
-            if (item != null && item.isSelected()) selected.add(acc);
-        }
-        return selected;
-    }
-
-    private void onAccountLogSelectionChanged() {
-        List<Account> selected = getSelectedLogAccounts();
-        if (selected.isEmpty()) {
-            accountLogMenuButton.setText("Select accounts");
-        } else if (selected.size() == allAccounts.size()) {
-            accountLogMenuButton.setText("All Accounts");
-        } else if (selected.size() == 1) {
-            accountLogMenuButton.setText(selected.get(0).getName());
-        } else {
-            accountLogMenuButton.setText(selected.size() + " accounts selected");
-        }
-        loadAccountLogPage(0);
+    private Page<AccountLog> searchLogs(List<Long> accountIds, Pageable pageable) {
+        return accountService.searchAccountLogs(accountIds,
+                filterDateRangeField.getStart(), filterDateRangeField.getEnd(),
+                getSelectedReference(), getSelectedCategoryId(), pageable);
     }
 
     private void loadAccountLogPage(int page) {
-        List<Account> selected = getSelectedLogAccounts();
-        if (selected.isEmpty()) {
+        List<Long> accountIds = getSelectedAccountIds();
+        if (accountIds.isEmpty()) {
             accountLogTable.setItems(FXCollections.observableArrayList());
             logCurrentPage = 0;
             logTotalPages = 1;
@@ -313,12 +365,9 @@ public class ReportsController {
             logNextPageBtn.setDisable(true);
             return;
         }
-        List<Long> accountIds = new ArrayList<>();
-        for (Account acc : selected) accountIds.add(acc.getId());
 
         int pageSize = logPageSizeComboBox.getValue() != null ? logPageSizeComboBox.getValue() : 20;
-        Pageable pageable = PageRequest.of(page, pageSize);
-        Page<AccountLog> result = accountService.getAccountLogsPage(accountIds, pageable);
+        Page<AccountLog> result = searchLogs(accountIds, PageRequest.of(page, pageSize));
 
         logCurrentPage = result.getNumber();
         logTotalPages = Math.max(result.getTotalPages(), 1);
@@ -338,14 +387,15 @@ public class ReportsController {
         if (logCurrentPage < logTotalPages - 1) loadAccountLogPage(logCurrentPage + 1);
     }
 
+    /** Exports exactly what the filters show (all pages), grouped per account. */
     @FXML
     public void handleExportCSV() {
-        List<Account> selectedAccounts = getSelectedLogAccounts();
+        List<Account> selectedAccounts = getSelectedAccounts();
         if (selectedAccounts.isEmpty()) { showAlert("Error", "Select at least one account to export"); return; }
 
         Map<String, List<AccountLog>> exportMap = new LinkedHashMap<>();
         for (Account acc : selectedAccounts) {
-            List<AccountLog> logs = accountService.getAccountLogs(acc.getId());
+            List<AccountLog> logs = searchLogs(List.of(acc.getId()), Pageable.unpaged()).getContent();
             if (!logs.isEmpty()) exportMap.put(acc.getName(), logs);
         }
         if (exportMap.isEmpty()) { showAlert("Error", "No log data found"); return; }
@@ -357,7 +407,8 @@ public class ReportsController {
         File file = chooser.showSaveDialog(null);
         if (file == null) return;
 
-        try (FileWriter fw = new FileWriter(file)) {
+        try (OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
+            fw.write("﻿"); // UTF-8 BOM so Excel detects the encoding and renders Bengali correctly
             for (Map.Entry<String, List<AccountLog>> entry : exportMap.entrySet()) {
                 fw.write("Account: " + entry.getKey() + "\n");
                 fw.write("Date,Change,Reference,Amount,Balance Before,Balance After,Note\n");

@@ -336,6 +336,18 @@ public class TransactionService {
         return getExpenseByAccountIds(userId, accountIds, start, end);
     }
 
+    /** Reports tab: income into the given accounts, optionally limited to one category (null = any). */
+    public BigDecimal getIncomeFiltered(Long userId, List<Long> accountIds, Long categoryId, LocalDate start, LocalDate end) {
+        if (accountIds == null || accountIds.isEmpty()) return BigDecimal.ZERO;
+        return transactionRepository.sumIncomeFiltered(userId, accountIds, categoryId, start, end);
+    }
+
+    /** Reports tab: expense from the given accounts, optionally limited to one category (null = any). */
+    public BigDecimal getExpenseFiltered(Long userId, List<Long> accountIds, Long categoryId, LocalDate start, LocalDate end) {
+        if (accountIds == null || accountIds.isEmpty()) return BigDecimal.ZERO;
+        return transactionRepository.sumExpenseFiltered(userId, accountIds, categoryId, start, end);
+    }
+
     public BigDecimal getNetIncome(Long userId, LocalDate startDate, LocalDate endDate) {
         return getTotalIncome(userId, startDate, endDate).subtract(getTotalExpense(userId, startDate, endDate));
     }

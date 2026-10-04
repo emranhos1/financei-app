@@ -24,8 +24,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -61,7 +59,6 @@ public class DashboardHomeController {
     private final LoanService loanService;
     private final DashboardController dashboardController;
 
-    private static final DateTimeFormatter TX_DATE_FMT = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH);
     private static final DateTimeFormatter FULL_MONTH_FMT = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
     private static final String[] BADGE_PALETTE = {"badge-teal", "badge-gold", "badge-blue", "badge-purple", "badge-rose", "badge-mint"};
@@ -77,8 +74,6 @@ public class DashboardHomeController {
 
     @FXML private HBox balanceCardsBox;
 
-    @FXML private Label netWorthAmountLabel;
-    @FXML private FlowPane netWorthChipsBox;
 
     @FXML private VBox recentTxBox;
 
@@ -87,12 +82,13 @@ public class DashboardHomeController {
     @FXML private Label topExpenseLabel;
     @FXML private PieChart dashExpensePieChart;
 
-    @FXML private VBox loansGivenCard;
-    @FXML private Label loansGivenTotalLabel;
-    @FXML private GridPane loansGivenBox;
+    @FXML private VBox loansCard;
+    @FXML private VBox loansBox;
+    @FXML private HBox loansTotalBox;
 
     @FXML private VBox cashMonthlyExpenseBox;
     @FXML private VBox bankMonthlyExpenseBox;
+    @FXML private VBox totalMonthlyExpenseBox;
 
     @FXML
     public void initialize() {
@@ -109,8 +105,8 @@ public class DashboardHomeController {
         lowBalanceReminderBanner.setCursor(javafx.scene.Cursor.HAND);
         lowBalanceReminderBanner.setOnMouseClicked(e -> dashboardController.goToAccountsTab());
 
-        loansGivenCard.setCursor(javafx.scene.Cursor.HAND);
-        loansGivenCard.setOnMouseClicked(e -> dashboardController.goToLoansTab());
+        loansCard.setCursor(javafx.scene.Cursor.HAND);
+        loansCard.setOnMouseClicked(e -> dashboardController.goToLoansTab());
     }
 
     private void showLoanReminderToast() {
@@ -204,13 +200,13 @@ public class DashboardHomeController {
         List<Account> accounts = accountService.getAccountsByUserId(userId);
 
         buildBalanceCards(userId);
-        buildNetWorthAndChips(accounts);
+        buildLoans(userId);
         buildRecentTransactions(userId, accounts);
         buildExpenseRing(userId, accounts, monthStart, today);
         buildTopExpense(userId, accounts, monthStart, today);
-        buildLoansGiven(userId);
-        buildMonthlyExpenseByType(cashMonthlyExpenseBox, userId, accounts, "CASH");
-        buildMonthlyExpenseByType(bankMonthlyExpenseBox, userId, accounts, "BANK");
+        BigDecimal[] cashByMonth = buildMonthlyExpenseByType(cashMonthlyExpenseBox, userId, accounts, "CASH");
+        BigDecimal[] bankByMonth = buildMonthlyExpenseByType(bankMonthlyExpenseBox, userId, accounts, "BANK");
+        buildMonthlyExpenseCombined(totalMonthlyExpenseBox, cashByMonth, bankByMonth);
     }
 
     private void buildBalanceCards(Long userId) {
@@ -236,40 +232,6 @@ public class DashboardHomeController {
             card.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(card, Priority.ALWAYS);
             balanceCardsBox.getChildren().add(card);
-        }
-    }
-
-    /** "Net worth" here means Bank and Cash type accounts only; every other account type
-     *  (Business, Plot, DPS, FDR, etc.) is excluded from this figure. */
-    private void buildNetWorthAndChips(List<Account> accounts) {
-        List<Account> liquidAccounts = new ArrayList<>();
-        for (Account a : accounts) {
-            String typeName = a.getAccountType().getName();
-            if ("BANK".equalsIgnoreCase(typeName) || "CASH".equalsIgnoreCase(typeName)) liquidAccounts.add(a);
-        }
-
-        BigDecimal total = BigDecimal.ZERO;
-        Map<Long, AccountType> typeById = new LinkedHashMap<>();
-        Map<Long, BigDecimal> sumByType = new LinkedHashMap<>();
-        for (Account a : liquidAccounts) {
-            total = total.add(a.getBalance());
-            Long typeId = a.getAccountType().getId();
-            typeById.putIfAbsent(typeId, a.getAccountType());
-            sumByType.merge(typeId, a.getBalance(), BigDecimal::add);
-        }
-        netWorthAmountLabel.setText(fmt(total));
-
-        netWorthChipsBox.getChildren().clear();
-        for (Map.Entry<Long, BigDecimal> e : sumByType.entrySet()) {
-            AccountType at = typeById.get(e.getKey());
-            Label chip = new Label(at.getName() + "  " + fmt(e.getValue()));
-            chip.getStyleClass().add("dash-chip");
-            netWorthChipsBox.getChildren().add(chip);
-        }
-        if (sumByType.isEmpty()) {
-            Label chip = new Label("No liquid accounts yet");
-            chip.getStyleClass().add("dash-section-hint");
-            netWorthChipsBox.getChildren().add(chip);
         }
     }
 
@@ -301,31 +263,21 @@ public class DashboardHomeController {
         String iconClass;
         String amountClass;
         String title;
-        String sub;
         String amountText;
-
-        String dateStr = tx.getDate().format(TX_DATE_FMT);
 
         if (tx.getType() == Transaction.TransactionType.INCOME) {
             glyph = "+"; iconClass = "dash-tx-icon-in"; amountClass = "dash-tx-amount-pos";
             Category c = categoriesById.get(tx.getCategoryId());
             title = c != null ? c.getName() : "Income";
-            Account acc = accountsById.get(tx.getToAccountId());
-            sub = (acc != null ? acc.getName() : "") + " · " + dateStr;
             amountText = "+" + fmt(tx.getAmount());
         } else if (tx.getType() == Transaction.TransactionType.EXPENSE) {
             glyph = "−"; iconClass = "dash-tx-icon-out"; amountClass = "dash-tx-amount-neg";
             Category c = categoriesById.get(tx.getCategoryId());
             title = c != null ? c.getName() : "Expense";
-            Account acc = accountsById.get(tx.getFromAccountId());
-            sub = (acc != null ? acc.getName() : "") + " · " + dateStr;
             amountText = "-" + fmt(tx.getAmount());
         } else {
             glyph = "\u21C4"; iconClass = "dash-tx-icon-transfer"; amountClass = "dash-tx-amount-neutral";
             title = "Transfer";
-            Account from = accountsById.get(tx.getFromAccountId());
-            Account to = accountsById.get(tx.getToAccountId());
-            sub = (from != null ? from.getName() : "") + " \u2192 " + (to != null ? to.getName() : "") + " · " + dateStr;
             amountText = fmt(tx.getAmount());
         }
 
@@ -334,9 +286,6 @@ public class DashboardHomeController {
 
         Label titleLabel = new Label(title);
         titleLabel.getStyleClass().add("dash-tx-title");
-        Label subLabel = new Label(sub);
-        subLabel.getStyleClass().add("dash-tx-sub");
-        VBox textBox = new VBox(1, titleLabel, subLabel);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -344,7 +293,7 @@ public class DashboardHomeController {
         Label amountLabel = new Label(amountText);
         amountLabel.getStyleClass().add(amountClass);
 
-        HBox row = new HBox(10, icon, textBox, spacer, amountLabel);
+        HBox row = new HBox(10, icon, titleLabel, spacer, amountLabel);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("dash-tx-row");
         return row;
@@ -428,56 +377,73 @@ public class DashboardHomeController {
         }
     }
 
-    /** One tile per person (4 per row) who still owes money on "I Gave" (LENT) loans, largest first. Only the
-     *  LENT side is shown - money the user borrowed from the same person is not netted off here. */
-    private void buildLoansGiven(Long userId) {
-        List<LoanService.PersonSummary> owing = new ArrayList<>();
-        BigDecimal total = BigDecimal.ZERO;
-        for (LoanService.PersonSummary ps : loanService.getPersonSummaries(userId)) {
-            if (ps.getLentRemaining().compareTo(BigDecimal.ZERO) > 0) {
-                owing.add(ps);
-                total = total.add(ps.getLentRemaining());
+    /** "Given" (people who owe the user, LENT) and "Taken" (people the user owes, BORROWED)
+     *  sections, one line per person with a non-zero outstanding amount, largest first. The two
+     *  sides are not netted against each other. The whole card is hidden when both are empty. */
+    private void buildLoans(Long userId) {
+        List<LoanService.PersonSummary> summaries = loanService.getPersonSummaries(userId);
+        List<LoanService.PersonSummary> given = new ArrayList<>();
+        List<LoanService.PersonSummary> taken = new ArrayList<>();
+        for (LoanService.PersonSummary ps : summaries) {
+            if (ps.getLentRemaining().compareTo(BigDecimal.ZERO) > 0) given.add(ps);
+            if (ps.getBorrowedRemaining().compareTo(BigDecimal.ZERO) > 0) taken.add(ps);
+        }
+        given.sort((a, b) -> b.getLentRemaining().compareTo(a.getLentRemaining()));
+        taken.sort((a, b) -> b.getBorrowedRemaining().compareTo(a.getBorrowedRemaining()));
+
+        loansBox.getChildren().clear();
+        loansTotalBox.getChildren().clear();
+        loansCard.setVisible(!given.isEmpty() || !taken.isEmpty());
+        if (!loansCard.isVisible()) return;
+
+        // totals sit next to the card heading: Given in green, Taken in red
+        if (!given.isEmpty()) {
+            BigDecimal total = BigDecimal.ZERO;
+            for (LoanService.PersonSummary ps : given) total = total.add(ps.getLentRemaining());
+            Label givenTotal = new Label(fmt(total));
+            givenTotal.getStyleClass().add("dash-tx-amount-pos");
+            Tooltip.install(givenTotal, new Tooltip("Total given - still to receive"));
+            loansTotalBox.getChildren().add(givenTotal);
+        }
+        if (!taken.isEmpty()) {
+            BigDecimal total = BigDecimal.ZERO;
+            for (LoanService.PersonSummary ps : taken) total = total.add(ps.getBorrowedRemaining());
+            if (!given.isEmpty()) loansTotalBox.getChildren().add(new Label("/"));
+            Label takenTotal = new Label(fmt(total));
+            takenTotal.getStyleClass().add("dash-tx-amount-neg");
+            Tooltip.install(takenTotal, new Tooltip("Total taken - still to pay back"));
+            loansTotalBox.getChildren().add(takenTotal);
+        }
+
+        if (!given.isEmpty()) {
+            for (LoanService.PersonSummary ps : given) {
+                BigDecimal repaid = ps.getTotalLent().subtract(ps.getLentRemaining());
+                loansBox.getChildren().add(buildLoanPersonRow(ps.getPersonName(), ps.getLentRemaining(),
+                        "dash-tx-amount-pos", "Given " + fmt(ps.getTotalLent()) + " · Repaid " + fmt(repaid)));
             }
         }
-        owing.sort((a, b) -> b.getLentRemaining().compareTo(a.getLentRemaining()));
-        loansGivenTotalLabel.setText(fmt(total));
-
-        loansGivenBox.getChildren().clear();
-        // hide the whole card when nobody owes anything
-        boolean hasOwing = !owing.isEmpty();
-        loansGivenCard.setVisible(hasOwing);
-        loansGivenCard.setManaged(hasOwing);
-        if (!hasOwing) return;
-
-        int columns = loansGivenBox.getColumnConstraints().size();
-        for (int i = 0; i < owing.size(); i++) {
-            LoanService.PersonSummary ps = owing.get(i);
-            Label badge = new Label(initials(ps.getPersonName()));
-            badge.getStyleClass().addAll("dash-badge", paletteClass(ps.getPersonName()));
-
-            Label nameLabel = new Label(ps.getPersonName());
-            nameLabel.getStyleClass().add("dash-tx-title");
-            Label amountLabel = new Label(fmt(ps.getLentRemaining()));
-            amountLabel.getStyleClass().add("dash-tx-amount-pos");
-            BigDecimal repaid = ps.getTotalLent().subtract(ps.getLentRemaining());
-            Label subLabel = new Label("Given " + fmt(ps.getTotalLent()) + " · Repaid " + fmt(repaid));
-            subLabel.getStyleClass().add("dash-tx-sub");
-
-            // name and amount share one line so each tile stays two lines tall
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-            HBox topLine = new HBox(6, nameLabel, spacer, amountLabel);
-            topLine.setAlignment(Pos.CENTER_LEFT);
-            VBox textBox = new VBox(0, topLine, subLabel);
-            textBox.setMinWidth(0);
-            HBox.setHgrow(textBox, Priority.ALWAYS);
-
-            HBox tile = new HBox(8, badge, textBox);
-            tile.setAlignment(Pos.CENTER_LEFT);
-            tile.getStyleClass().add("dash-loan-tile");
-            tile.setMaxWidth(Double.MAX_VALUE);
-            loansGivenBox.add(tile, i % columns, i / columns);
+        if (!taken.isEmpty()) {
+            for (LoanService.PersonSummary ps : taken) {
+                BigDecimal repaid = ps.getTotalBorrowed().subtract(ps.getBorrowedRemaining());
+                loansBox.getChildren().add(buildLoanPersonRow(ps.getPersonName(), ps.getBorrowedRemaining(),
+                        "dash-tx-amount-neg", "Taken " + fmt(ps.getTotalBorrowed()) + " · Repaid " + fmt(repaid)));
+            }
         }
+    }
+
+    /** One line per person; the given/taken/repaid breakdown is kept in a tooltip to save height. */
+    private HBox buildLoanPersonRow(String name, BigDecimal remaining, String amountClass, String detail) {
+        Label nameLabel = new Label(name);
+        nameLabel.getStyleClass().add("dash-tx-title");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        Label amountLabel = new Label(fmt(remaining));
+        amountLabel.getStyleClass().add(amountClass);
+        HBox row = new HBox(6, nameLabel, spacer, amountLabel);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("dash-tx-row");
+        Tooltip.install(row, new Tooltip(detail));
+        return row;
     }
 
     /**
@@ -493,9 +459,11 @@ public class DashboardHomeController {
      * - Every OTHER month (past or future) is never recalculated - it simply shows whatever is
      *   saved in the table (0 if nothing was ever saved for it). This is what makes a month
      *   "freeze" once it's no longer current: only a manual ✎ edit can change it after that.
+     * Returns the 12 figures shown (index 0 = Jan) so the Cash + Bank card can add them up.
      */
-    private void buildMonthlyExpenseByType(VBox container, Long userId, List<Account> accounts, String typeName) {
+    private BigDecimal[] buildMonthlyExpenseByType(VBox container, Long userId, List<Account> accounts, String typeName) {
         container.getChildren().clear();
+        BigDecimal[] byMonth = new BigDecimal[12];
 
         LocalDate today = LocalDate.now();
         int year = today.getYear();
@@ -520,7 +488,46 @@ public class DashboardHomeController {
             }
 
             total = total.add(amount);
+            byMonth[month - 1] = amount;
             container.getChildren().add(buildMonthlyExpenseRow(ym, typeName, amount, isManual, userId));
+        }
+
+        BigDecimal avg = total.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+        container.getChildren().add(buildSummaryRow("Total", fmt(total), "dash-monthly-row-total"));
+        container.getChildren().add(buildSummaryRow("AVG", fmt(avg), "dash-monthly-row-avg"));
+        return byMonth;
+    }
+
+    /** Cash + Bank per month: the sum of the two cards' shown figures (manual ✎ values included),
+     *  so it always agrees with them. Read-only - corrections are made in the Cash/Bank cards. */
+    private void buildMonthlyExpenseCombined(VBox container, BigDecimal[] cashByMonth, BigDecimal[] bankByMonth) {
+        container.getChildren().clear();
+        int year = LocalDate.now().getYear();
+        BigDecimal total = BigDecimal.ZERO;
+        for (int month = 1; month <= 12; month++) {
+            BigDecimal amount = cashByMonth[month - 1].add(bankByMonth[month - 1]);
+            total = total.add(amount);
+
+            Label nameLabel = new Label(YearMonth.of(year, month).format(MONTH_FMT).toUpperCase(Locale.ENGLISH));
+            nameLabel.getStyleClass().add("dash-card-label");
+            nameLabel.setPrefWidth(40);
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+            Label valueLabel = new Label(fmt(amount));
+            valueLabel.getStyleClass().add("dash-card-label");
+            // invisible, zero-width stand-in for the ✎ button: keeps the row as tall as the
+            // Cash/Bank rows (so all three cards line up) without leaving a gap after the amount
+            Button placeholder = new Button("✎");
+            placeholder.getStyleClass().add("dash-monthly-edit-btn");
+            placeholder.setVisible(false);
+            placeholder.setMinWidth(0);
+            placeholder.setPrefWidth(0);
+            placeholder.setMaxWidth(0);
+
+            HBox row = new HBox(0, nameLabel, spacer, valueLabel, placeholder);
+            row.getStyleClass().add("dash-monthly-row");
+            row.setAlignment(Pos.CENTER_LEFT);
+            container.getChildren().add(row);
         }
 
         BigDecimal avg = total.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
