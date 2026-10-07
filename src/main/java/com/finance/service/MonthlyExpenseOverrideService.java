@@ -62,6 +62,16 @@ public class MonthlyExpenseOverrideService {
         monthlyExpenseOverrideRepository.save(record);
     }
 
+    /** The ↻ button on the dashboard: recalculates one (usually past, frozen) month from its
+     *  transactions with the current rules and saves it as an auto value. Returns the new figure.
+     *  Does nothing to a month the user saved manually (the button isn't shown for those). */
+    public BigDecimal recalculateMonth(Long userId, List<Account> accounts, String accountTypeName, int year, int month) {
+        YearMonth ym = YearMonth.of(year, month);
+        BigDecimal amount = transactionService.getEffectiveExpense(userId, accounts, accountTypeName, ym.atDay(1), ym.atEndOfMonth());
+        autoSaveCurrentMonth(userId, accountTypeName, year, month, amount);
+        return amount;
+    }
+
     /**
      * One-time, idempotent backfill: for every user and every tracked account type (CASH, BANK),
      * computes each past month's expense total from existing transaction history and saves it as
