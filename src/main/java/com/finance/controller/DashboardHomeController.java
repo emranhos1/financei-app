@@ -21,6 +21,7 @@ import javafx.geometry.Pos;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Tooltip;
@@ -489,7 +490,7 @@ public class DashboardHomeController {
 
             total = total.add(amount);
             byMonth[month - 1] = amount;
-            container.getChildren().add(buildMonthlyExpenseRow(ym, typeName, amount, isManual, userId));
+            container.getChildren().add(buildMonthlyExpenseRow(ym, typeName, amount, isManual, userId, accounts));
         }
 
         BigDecimal avg = total.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
@@ -535,7 +536,8 @@ public class DashboardHomeController {
         container.getChildren().add(buildSummaryRow("AVG", fmt(avg), "dash-monthly-row-avg"));
     }
 
-    private HBox buildMonthlyExpenseRow(YearMonth ym, String typeName, BigDecimal amount, boolean isSaved, Long userId) {
+    private HBox buildMonthlyExpenseRow(YearMonth ym, String typeName, BigDecimal amount, boolean isSaved, Long userId,
+                                        List<Account> accounts) {
         Label nameLabel = new Label(ym.format(MONTH_FMT).toUpperCase(Locale.ENGLISH));
         nameLabel.getStyleClass().add("dash-card-label");
         nameLabel.setPrefWidth(40);
@@ -554,10 +556,45 @@ public class DashboardHomeController {
         Tooltip.install(editBtn, new Tooltip("Manually save this month's actual " + typeName + " expense"));
         editBtn.setOnAction(e -> handleEditMonthlyExpense(ym, typeName, amount, userId));
 
-        HBox row = new HBox(6, nameLabel, spacer, valueLabel, editBtn);
+        // ↻ only for auto-calculated months; manually saved ones keep an invisible stand-in so
+        // the ✎ column stays aligned
+        Button recalcBtn = new Button("↻");
+        recalcBtn.getStyleClass().add("dash-monthly-edit-btn");
+        if (isSaved) {
+            recalcBtn.setVisible(false);
+        } else {
+            Tooltip.install(recalcBtn, new Tooltip("Recalculate this month's " + typeName + " expense from its transactions"));
+            recalcBtn.setOnAction(e -> handleRecalculateMonth(ym, typeName, amount, userId, accounts));
+        }
+
+        HBox row = new HBox(6, nameLabel, spacer, valueLabel, recalcBtn, editBtn);
         row.getStyleClass().add("dash-monthly-row");
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
+    }
+
+    /** Shows old vs recalculated figure and saves only if the user confirms. */
+    private void handleRecalculateMonth(YearMonth ym, String typeName, BigDecimal currentAmount, Long userId, List<Account> accounts) {
+        BigDecimal recalculated = transactionService.getEffectiveExpense(userId, accounts, typeName, ym.atDay(1), ym.atEndOfMonth());
+        if (recalculated.compareTo(currentAmount) == 0) {
+            Alert info = new Alert(Alert.AlertType.INFORMATION,
+                    ym.format(FULL_MONTH_FMT) + " — " + typeName + " is already up to date (" + fmt(currentAmount) + ").");
+            info.setTitle("Recalculate");
+            info.setHeaderText(null);
+            info.showAndWait();
+            return;
+        }
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                ym.format(FULL_MONTH_FMT) + " — " + typeName + " expense\n\n"
+                        + "Saved now:      " + fmt(currentAmount) + "\n"
+                        + "Recalculated:  " + fmt(recalculated) + "\n\nUpdate to the recalculated figure?");
+        confirm.setTitle("Recalculate");
+        confirm.setHeaderText(null);
+        confirm.showAndWait().ifPresent(btn -> {
+            if (btn != ButtonType.OK) return;
+            monthlyExpenseOverrideService.recalculateMonth(userId, accounts, typeName, ym.getYear(), ym.getMonthValue());
+            refreshDashboard();
+        });
     }
 
     private void handleEditMonthlyExpense(YearMonth ym, String typeName, BigDecimal currentAmount, Long userId) {
